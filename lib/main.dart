@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mozayed_app/screens/home_screen.dart';
 
 final theme = ThemeData().copyWith(
   scaffoldBackgroundColor: Colors.white70,
@@ -20,7 +21,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: theme,
-      home: ,
+      home: const HomeScreen(),
     );
   }
 }
