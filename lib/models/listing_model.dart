@@ -4,7 +4,7 @@ class ListingItem {
   final String id;
   final String title;
   final String description;
-  final String image;
+  final List<String> image;
   final double price;
   final String condition;
   final ListingLocation? location;
@@ -18,6 +18,7 @@ class ListingItem {
     required this.condition,
     this.location,
   });
+
 }
 
 class ListingLocation extends SellingLocation {

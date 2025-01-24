@@ -16,8 +16,6 @@ class User {
       required this.location});
 }
 
-
-
 class UserLocation extends SellingLocation {
   final String? country;
   const UserLocation({
@@ -29,3 +27,4 @@ class UserLocation extends SellingLocation {
     this.country,
   });
 }
+
