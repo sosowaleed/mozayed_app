@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mozayed_app/widgets/listing_widget.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -11,7 +12,7 @@ class HomeScreen extends StatelessWidget {
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          int crossAxisCount = 3;
+          int crossAxisCount = 2;
           if (constraints.maxWidth >= 1200) {
             crossAxisCount = 6;
           } else if (constraints.maxWidth >= 735) {
@@ -26,7 +27,7 @@ class HomeScreen extends StatelessWidget {
                 mainAxisSpacing: 10,
               ),
               itemCount: 50,
-              itemBuilder: (context, index) => Card(child: Center(child: Text('Card ${index + 1}'))),
+              itemBuilder: (context, index) => const ListingWidget(),
             ),
           );
         },
