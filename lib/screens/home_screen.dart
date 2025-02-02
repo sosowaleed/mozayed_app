@@ -1,8 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:mozayed_app/layouts/home_content_layout.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mozayed_app/providers/auth_provider.dart';
+import 'package:mozayed_app/layouts/home_content_layout.dart';
+import 'package:mozayed_app/providers/user_and_auth_provider.dart';
+import 'package:mozayed_app/screens/profile_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -14,7 +15,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedIndex = 0;
 
-  final List<Map<String, dynamic>> _menuItems = [
+  // Only include main navigation items: Home, Cart, Sell.
+  final List<Map<String, dynamic>> _mainMenuItems = [
     {
       'title': 'Home',
       'icon': Icons.home,
@@ -26,26 +28,87 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       'screen': const Center(child: Text('Shopping Cart')),
     },
     {
-      'title': 'Profile',
-      'icon': Icons.person,
-      'screen': const Center(child: Text('Profile')),
-    },
-    {
-      'title': 'Settings',
-      'icon': Icons.settings,
-      'screen': const Center(child: Text('Settings')),
+      'title': 'Sell',
+      'icon': Icons.add_box,
+      'screen': const Center(child: Text('Sell an Item')),
     },
   ];
 
-  void _onItemTapped(int index) {
+  // Profile menu items shown in the AppBar popup menu.
+  final List<Map<String, dynamic>> _profileMenuItems = [
+    {
+      'title': const Text('Profile'),
+      'icon': Icons.person,
+      'onTap': (context) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const ProfileScreen(),
+          ),
+        );
+      },
+    },
+    {
+      'title': const Text('History'),
+      'icon': Icons.history,
+      'onTap': () {
+        // Navigate to History Screen
+        debugPrint('History tapped');
+      },
+    },
+    {
+      'title': const Text('Settings'),
+      'icon': Icons.settings,
+      'onTap': () {
+        // Navigate to Settings Screen
+        debugPrint('Settings tapped');
+      },
+    },
+    {
+      'title': const Text(
+          'Sign Out',
+        style: TextStyle(color: Colors.red),
+      ),
+      'icon': Icons.logout,
+      'onTap': () async {
+        await FirebaseAuth.instance.signOut();
+      },
+    },
+  ];
+
+  void _onMainItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
   }
 
+  // Build the profile popup menu button for the AppBar.
+  Widget _buildProfileMenuButton(BuildContext ctx) {
+    return PopupMenuButton<Map<String, dynamic>>(
+      icon: const CircleAvatar(
+        child: Icon(Icons.person),
+      ),
+      onSelected: (item) => item['onTap'](ctx),
+      itemBuilder: (context) {
+        return _profileMenuItems.map((item) {
+          return PopupMenuItem<Map<String, dynamic>>(
+            value: item,
+            child: Row(
+              children: [
+                Icon(item['icon'], size: 20),
+                const SizedBox(width: 8),
+                item['title'],
+              ],
+            ),
+          );
+        }).toList();
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final userData = ref.watch(userDataProvider);
+    final userData = ref.watch(userDataProvider); // if needed for display
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -53,76 +116,59 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(_menuItems[_selectedIndex]['title'] == 'Home' ? 'Mozayed' : _menuItems[_selectedIndex]['title']),
+            title: Text(
+              _mainMenuItems[_selectedIndex]['title'] == 'Home'
+                  ? 'Mozayed'
+                  : _mainMenuItems[_selectedIndex]['title'],
+            ),
             actions: [
-              TextButton.icon(
-                icon: const Icon(Icons.logout),
-                label: const Text("Sign Out"),
-                onPressed: () async {
-                  // Sign out from Firebase
-                  await FirebaseAuth.instance.signOut();
-                  // Optionally, navigate to the login screen or perform other cleanup
-                },
-              )
+              // Display the profile icon as a popup menu button
+              // Passing the context
+              _buildProfileMenuButton(context),
+              const SizedBox(width: 10),
             ],
           ),
-          // if its a phone, we do not need a drawer
-          /*drawer: isPhone
-              ? Drawer(
-            child: ListView(
-              children: _menuItems.map((item) {
-                final index = _menuItems.indexOf(item);
-                return ListTile(
-                  leading: Icon(item['icon']),
-                  title: Text(item['title']),
-                  onTap: () {
-                    _onItemTapped(index);
-                    Navigator.pop(context); // Close drawer on mobile
-                  },
-                );
-              }).toList(),
-            ),
-          )
-              : null,*/
+          // For larger screens, use a persistent drawer; for phones, use a bottom nav.
           body: isPhone
-              ? _menuItems[_selectedIndex]['screen']
+              ? _mainMenuItems[_selectedIndex]['screen']
               : Row(
             children: [
-              // Drawer-like widget always open
+              // Always-open drawer-like widget
               Container(
                 width: 200,
                 color: Colors.grey[100],
                 child: ListView(
-                  children: _menuItems.map((item) {
-                    final index = _menuItems.indexOf(item);
+                  children: _mainMenuItems.map((item) {
+                    final index = _mainMenuItems.indexOf(item);
                     return ListTile(
                       leading: Icon(item['icon']),
                       title: Text(item['title']),
                       selected: index == _selectedIndex,
                       style: ListTileStyle.drawer,
-                      onTap: () => _onItemTapped(index),
+                      onTap: () => _onMainItemTapped(index),
                     );
                   }).toList(),
                 ),
               ),
-              // Main content
+              // Main content area
               Expanded(
-                child: _menuItems[_selectedIndex]['screen'],
+                child: _mainMenuItems[_selectedIndex]['screen'],
               ),
             ],
           ),
           bottomNavigationBar: isPhone
               ? BottomNavigationBar(
-            items: _menuItems
+            items: _mainMenuItems
                 .map(
                   (item) => BottomNavigationBarItem(
-                    icon: Icon(item['icon']),
-                    label: item['title'],
-                    backgroundColor: Theme.of(context).colorScheme.primary,
+                icon: Icon(item['icon']),
+                label: item['title'],
+                backgroundColor: Theme.of(context).colorScheme.primary,
               ),
-            ).toList(),
+            )
+                .toList(),
             currentIndex: _selectedIndex,
-            onTap: _onItemTapped,
+            onTap: _onMainItemTapped,
           )
               : null,
         );
@@ -130,4 +176,3 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 }
-

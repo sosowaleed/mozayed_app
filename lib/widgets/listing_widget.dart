@@ -66,7 +66,7 @@ class _ListingWidgetState extends State<ListingWidget> {
                       listingItem.image[_currentImageIndex],
                       fit: BoxFit.cover,
                       width: double.infinity,
-                      height: isPhoneLayout ? 250 : 500,
+                      height: double.infinity,
                     ),
                   ),
                 ),

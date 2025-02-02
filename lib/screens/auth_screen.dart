@@ -235,9 +235,29 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _loadMapGooglePicker() async {
-    LatLng? pickedLocation = await Navigator.of(context).push<LatLng>(
+    LatLng? position = await Navigator.of(context).push<LatLng>(
         MaterialPageRoute(builder: (ctx) => const GoogleMapScreen()
     ));
+    /*//for Google maps implementation
+    final lat = position.latitude;
+    final lng = position.longitude;
+
+    final url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=YOUR_API_KEY'); //need api key!
+    final response = await http.get(url);
+    final resData = json.decode(response.body);
+    _userModel["location"] = {
+      "lat": lat,
+      "lng": lng,
+      "address": resData['results'][0]['formatted_address'],
+      "city": resData['results'][0]['address_components'][5]['long_name'],
+      "zip": resData['results'][0]['address_components'][7]['long_name'],
+      "country": resData['results'][0]['address_components'][6]['long_name'],
+    };
+    setState(() {
+      _address = _userModel["location"]["address"];
+    });
+     */
   }
 
   Future<void> _loadMapPicker() async {
@@ -257,6 +277,18 @@ class _AuthScreenState extends State<AuthScreen> {
         lng: pickedLocation[1],
         lang: Localizations.localeOf(context),
       );
+
+      if(address["display_name"] != "address not found") {
+        _userModel["location"] = {
+          "lat": pickedLocation[0],
+          "lng": pickedLocation[1],
+          "address": address["display_name"],
+          "city": address["address"]["city"],
+          "zip": address["address"]["postcode"],
+          "country": address["address"]["country"],
+        };
+      }
+
       setState(() {
         _address = address["display_name"];
         _isGettingLocation = false;

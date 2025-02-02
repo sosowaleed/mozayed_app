@@ -4,7 +4,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 
 class StaticMapPickerScreen extends StatefulWidget {
-  const StaticMapPickerScreen({super.key});
+  final double? lat;
+  final double? lng;
+  const StaticMapPickerScreen({super.key, this.lat, this.lng});
 
   @override
   State<StaticMapPickerScreen> createState() {
@@ -13,12 +15,17 @@ class StaticMapPickerScreen extends StatefulWidget {
 }
 
 class _StaticMapPickerScreenState extends State<StaticMapPickerScreen> {
-  LatLng? _pickedLocation = const LatLng(37.422, -122.084);
+  LatLng? _pickedLocation;
   double _zoomLevel = 13.0;
 
   @override
   void initState() {
     super.initState();
+    if (widget.lat != null && widget.lng != null) {
+      _pickedLocation = LatLng(widget.lat!, widget.lng!);
+    } else {
+      _pickedLocation = const LatLng(37.422, -122.084);
+    }
     //_fetchInitialLocation();
   }
 

@@ -3,7 +3,7 @@ import 'package:mozayed_app/screens/auth_screen.dart';
 import 'package:mozayed_app/screens/home_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'providers/auth_provider.dart';
+import 'providers/user_and_auth_provider.dart';
 import 'firebase_options.dart';
 
 final theme = ThemeData().copyWith(
