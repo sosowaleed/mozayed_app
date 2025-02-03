@@ -3,6 +3,8 @@ import 'package:uuid/uuid.dart';
 
 const uuid = Uuid();
 
+enum SaleType { buyNow, bid } // Buy or bid system
+
 class ListingItem {
   final String id;
   final String ownerId;
@@ -10,9 +12,11 @@ class ListingItem {
   final String title;
   final String description;
   final List<String> image;
-  final double price;
+  final double price; // For bid, this might be the starting price.
   final String condition;
   final ListingLocation? location;
+  final int quantity;
+  final SaleType saleType; // Determines whether bidding is enabled
 
   ListingItem({
     String? id,
@@ -24,6 +28,8 @@ class ListingItem {
     required this.price,
     required this.condition,
     this.location,
+    this.quantity = 1,
+    this.saleType = SaleType.buyNow,
   }) : id = id ?? uuid.v4();
 
   Map<String, dynamic> toMap() {
@@ -37,6 +43,8 @@ class ListingItem {
       'price': price,
       'condition': condition,
       'location': location?.toMap(),
+      'quantity': quantity,
+      'saleType': saleType.toString().split('.').last, // store as string
     };
   }
 
@@ -53,9 +61,14 @@ class ListingItem {
       location: map['location'] != null
           ? ListingLocation.fromMap(map['location'])
           : null,
+      quantity: map['quantity'] ?? 1,
+      saleType: (map['saleType'] as String).toLowerCase() == 'bid'
+          ? SaleType.bid
+          : SaleType.buyNow,
     );
   }
 }
+
 
 class ListingLocation extends SellingLocation {
   final String? country;

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mozayed_app/layouts/home_content_layout.dart';
 import 'package:mozayed_app/providers/user_and_auth_provider.dart';
 import 'package:mozayed_app/screens/profile_screen.dart';
+import 'package:mozayed_app/screens/sell_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -30,7 +31,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     {
       'title': 'Sell',
       'icon': Icons.add_box,
-      'screen': const Center(child: Text('Sell an Item')),
+      'screen': const SellScreen(),
     },
   ];
 
