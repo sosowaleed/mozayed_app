@@ -5,6 +5,7 @@ import 'package:mozayed_app/layouts/home_content_layout.dart';
 import 'package:mozayed_app/providers/user_and_auth_provider.dart';
 import 'package:mozayed_app/screens/profile_screen.dart';
 import 'package:mozayed_app/screens/sell_screen.dart';
+import 'package:mozayed_app/screens/user_listing_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -45,6 +46,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => const ProfileScreen(),
+          ),
+        );
+      },
+    },{
+      'title': const Text('My items'),
+      'icon': Icons.list_alt,
+      'onTap': (context) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const MyListingsScreen(),
           ),
         );
       },

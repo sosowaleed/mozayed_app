@@ -1,40 +1,50 @@
 import 'dart:io';
-import 'dart:convert';
 import 'dart:developer';
 import 'package:http/http.dart' as http;
 import 'package:geocoding/geocoding.dart' as geo;
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mozayed_app/models/listing_model.dart';
-import 'package:mozayed_app/models/user_model.dart';
-import 'package:mozayed_app/providers/user_and_auth_provider.dart';
 import 'package:mozayed_app/providers/listing_provider.dart';
 import 'package:mozayed_app/screens/static_flutter_map_screen.dart';
 import 'package:image_picker/image_picker.dart';
 
-class SellScreen extends ConsumerStatefulWidget {
-  const SellScreen({super.key});
+class EditListingScreen extends ConsumerStatefulWidget {
+  final ListingItem listing;
+  const EditListingScreen({super.key, required this.listing});
 
   @override
-  ConsumerState<SellScreen> createState() => _SellScreenState();
+  ConsumerState<EditListingScreen> createState() => _EditListingScreenState();
 }
 
-class _SellScreenState extends ConsumerState<SellScreen> {
+class _EditListingScreenState extends ConsumerState<EditListingScreen> {
   final _formKey = GlobalKey<FormState>();
-  final Map<String, dynamic> _listingData = {};
+  late Map<String, dynamic> _listingData;
   bool _isGettingLocation = false;
   String? _address;
-  SaleType _saleType = SaleType.buyNow; // Default to Buy Now
-
-  // List to hold the picked images
+  SaleType _saleType = SaleType.buyNow;
   final List<XFile> _pickedImages = [];
   final ImagePicker _picker = ImagePicker();
 
-  final List<String> _conditions = ["New", "Used: feels new", "Used: good", "Used: acceptable"];
-  String _selectedCondition = "New"; // Default condition
+  @override
+  void initState() {
+    super.initState();
+    // Pre-populate the form with existing listing data.
+    _listingData = {
+      "title": widget.listing.title,
+      "description": widget.listing.description,
+      "price": widget.listing.price.toString(),
+      "quantity": widget.listing.quantity.toString(),
+      "condition": widget.listing.condition,
+      "location": widget.listing.location?.toMap(),
+      "image": widget.listing.image,
+    };
+    _address = widget.listing.location?.address;
+    _saleType = widget.listing.saleType;
+  }
 
-  /// Opens the image picker and lets the user choose an image from gallery or camera.
   Future<void> _pickImage(ImageSource source) async {
     final pickedFile = await _picker.pickImage(source: source, imageQuality: 80);
     if (pickedFile != null) {
@@ -88,19 +98,23 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     }
   }
 
-  void _saveListing(UserModel user) async {
+  void _saveListing() async {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
 
-    // TODO: upload images to firebase storage.
-    _listingData["image"] = _pickedImages.map((xFile) => xFile.path).toList();
 
-    final listing = ListingItem(
-      ownerId: user.id,
-      ownerName: user.name,
+    // TODO: upload image to firebase storage.
+    List<String> updatedImages = List<String>.from(_listingData["image"]);
+    updatedImages.addAll(_pickedImages.map((xFile) => xFile.path));
+    _listingData["image"] = updatedImages;
+
+    final updatedListing = ListingItem(
+      id: widget.listing.id,
+      ownerId: widget.listing.ownerId,
+      ownerName: widget.listing.ownerName,
       title: _listingData["title"],
       description: _listingData["description"],
-      image: _listingData["image"] ?? [],
+      image: _listingData["image"],
       price: double.parse(_listingData["price"]),
       condition: _listingData["condition"],
       quantity: int.parse(_listingData["quantity"]),
@@ -110,23 +124,16 @@ class _SellScreenState extends ConsumerState<SellScreen> {
           : null,
     );
 
-    await ref.read(listingsProvider.notifier).addListing(listing);
-    // Optionally, clear the form or navigate back.
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Published Successfully")),
-      );
-    }
+    // Update the listing via the provider (you would need to implement an update method)
+    await ref.read(listingsProvider.notifier).updateListing(updatedListing);
+    Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    // we assume that the user data is already loaded.
-    UserModel user = UserModel.fromMap(ref.read(userDataProvider).value!);
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Sell an Item"),
+        title: const Text("Edit Listing"),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -135,22 +142,23 @@ class _SellScreenState extends ConsumerState<SellScreen> {
             key: _formKey,
             child: Column(
               children: [
-                // Images Preview
-                if (_pickedImages.isNotEmpty)
-                  SizedBox(
-                    height: 200,
-                    child: PageView.builder(
-                      itemCount: _pickedImages.length,
-                      itemBuilder: (ctx, index) {
-                        return Image.file(
-                          File(_pickedImages[index].path),
-                          fit: BoxFit.cover,
-                        );
-                      },
-                    ),
+                // Images Preview (existing images + newly picked ones)
+                SizedBox(
+                  height: 200,
+                  child: PageView(
+                    children: [
+                      // Display pre-existing images
+                      ...(_listingData["image"] as List<String>).map((imgUrl) {
+                        return Image.network(imgUrl, fit: BoxFit.cover);
+                      }),
+                      // Display newly picked images
+                      ..._pickedImages.map((xFile) {
+                        return Image.file(File(xFile.path), fit: BoxFit.cover);
+                      }),
+                    ],
                   ),
+                ),
                 const SizedBox(height: 8),
-                // Buttons to pick images
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -167,12 +175,13 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                // Title Field
+                // Form fields (title, description, etc.)
                 TextFormField(
+                  initialValue: _listingData["title"],
                   decoration: const InputDecoration(labelText: "Title"),
                   validator: (value) {
                     if (value == null || value.trim().length < 4) {
-                      return "Please enter a valid title (at least 4 characters).";
+                      return "Please enter a valid title.";
                     }
                     return null;
                   },
@@ -180,23 +189,21 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                     _listingData["title"] = value;
                   },
                 ),
-                // Description Field
                 TextFormField(
+                  initialValue: _listingData["description"],
                   decoration: const InputDecoration(labelText: "Description"),
                   maxLines: 3,
                   onSaved: (value) {
                     _listingData["description"] = value;
                   },
                 ),
-                // Price Field
                 TextFormField(
+                  initialValue: _listingData["price"],
                   decoration: const InputDecoration(labelText: "Price"),
                   keyboardType: TextInputType.number,
                   validator: (value) {
                     if (value == null || double.tryParse(value) == null) {
                       return "Please enter a valid price.";
-                    } else if (double.parse(value) <= 0) {
-                      return "Price must be greater than zero.";
                     }
                     return null;
                   },
@@ -204,15 +211,13 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                     _listingData["price"] = value;
                   },
                 ),
-                // Quantity Field
                 TextFormField(
+                  initialValue: _listingData["quantity"],
                   decoration: const InputDecoration(labelText: "Quantity"),
                   keyboardType: TextInputType.number,
                   validator: (value) {
                     if (value == null || int.tryParse(value) == null) {
                       return "Please enter a valid quantity.";
-                    } else if (int.parse(value) <= 0) {
-                      return "Quantity must be greater than zero.";
                     }
                     return null;
                   },
@@ -220,27 +225,13 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                     _listingData["quantity"] = value;
                   },
                 ),
-                // Condition Field
-                DropdownButtonFormField<String>(
+                TextFormField(
+                  initialValue: _listingData["condition"],
                   decoration: const InputDecoration(labelText: "Condition"),
-                  value: _selectedCondition,
-                  items: _conditions.map((condition) {
-                    return DropdownMenuItem<String>(
-                      value: condition,
-                      child: Text(condition),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedCondition = value!;
-                    });
-                  },
                   onSaved: (value) {
                     _listingData["condition"] = value;
                   },
                 ),
-
-
                 const SizedBox(height: 12),
                 // Sale Type Toggle
                 Row(
@@ -280,8 +271,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: () => _saveListing(user),
-                  child: const Text("Publish Listing"),
+                  onPressed: _saveListing,
+                  child: const Text("Save Changes"),
                 ),
               ],
             ),
