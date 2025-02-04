@@ -17,6 +17,7 @@ class ListingItem {
   final ListingLocation? location;
   final int quantity;
   final SaleType saleType; // Determines whether bidding is enabled
+  final String category;
 
   ListingItem({
     String? id,
@@ -30,6 +31,7 @@ class ListingItem {
     this.location,
     this.quantity = 1,
     this.saleType = SaleType.buyNow,
+    required this.category,
   }) : id = id ?? uuid.v4();
 
   Map<String, dynamic> toMap() {
@@ -44,7 +46,8 @@ class ListingItem {
       'condition': condition,
       'location': location?.toMap(),
       'quantity': quantity,
-      'saleType': saleType.toString().split('.').last, // store as string
+      'saleType': saleType.toString().split('.').last,
+      'category': category,
     };
   }
 
@@ -58,13 +61,10 @@ class ListingItem {
       image: List<String>.from(map['image']),
       price: map['price'],
       condition: map['condition'],
-      location: map['location'] != null
-          ? ListingLocation.fromMap(map['location'])
-          : null,
+      location: map['location'] != null ? ListingLocation.fromMap(map['location']) : null,
       quantity: map['quantity'] ?? 1,
-      saleType: (map['saleType'] as String).toLowerCase() == 'bid'
-          ? SaleType.bid
-          : SaleType.buyNow,
+      saleType: (map['saleType'] as String).toLowerCase() == 'bid' ? SaleType.bid : SaleType.buyNow,
+      category: map['category'] ?? "Other",
     );
   }
 }

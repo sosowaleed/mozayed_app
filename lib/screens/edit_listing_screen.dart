@@ -20,6 +20,8 @@ class EditListingScreen extends ConsumerStatefulWidget {
 }
 
 class _EditListingScreenState extends ConsumerState<EditListingScreen> {
+  final List<String> _categoryOptions = ["Furniture","Electronics", "Clothing", "Home", "Books", "Toys", "Other"];
+  String _selectedCategory = "Other";
   final _formKey = GlobalKey<FormState>();
   late Map<String, dynamic> _listingData;
   bool _isGettingLocation = false;
@@ -38,6 +40,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       "price": widget.listing.price.toString(),
       "quantity": widget.listing.quantity.toString(),
       "condition": widget.listing.condition,
+      "category": widget.listing.category,
       "location": widget.listing.location?.toMap(),
       "image": widget.listing.image,
     };
@@ -119,6 +122,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       condition: _listingData["condition"],
       quantity: int.parse(_listingData["quantity"]),
       saleType: _saleType,
+      category: _listingData["category"],
       location: _listingData["location"] != null
           ? ListingLocation.fromMap(_listingData["location"])
           : null,
@@ -126,7 +130,9 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
 
     // Update the listing via the provider (you would need to implement an update method)
     await ref.read(listingsProvider.notifier).updateListing(updatedListing);
-    Navigator.of(context).pop();
+    if(mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -252,6 +258,35 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                           _saleType = value ?? SaleType.buyNow;
                         });
                       },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Text("Category: "),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: "Select Category",
+                        ),
+                        value: _selectedCategory,
+                        items: _categoryOptions.map((category) {
+                          return DropdownMenuItem<String>(
+                            value: category,
+                            child: Text(category),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedCategory = val ?? "Other";
+                          });
+                        },
+                        onSaved: (val) {
+                          _listingData["category"] = val;
+                        },
+                      ),
                     ),
                   ],
                 ),

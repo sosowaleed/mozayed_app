@@ -1,20 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:mozayed_app/models/listing_model.dart';
-import 'package:mozayed_app/dummy_data/user_dummydata.dart';
 import 'package:mozayed_app/screens/listing_details_screen.dart';
 
 class ListingWidget extends StatefulWidget {
-  const ListingWidget({super.key});
+  final ListingItem listingItem;
+  const ListingWidget({super.key, required this.listingItem});
 
   @override
   State<ListingWidget> createState() => _ListingWidgetState();
 }
 
 class _ListingWidgetState extends State<ListingWidget> {
-  ListingItem listingItem = generateDummyListingItem();
+  late ListingItem listingItem;
   int _currentImageIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    listingItem = widget.listingItem;
+  }
   bool isPhone(BuildContext context) {
     final size = MediaQuery.of(context).size;
     return size.width < 600; // Adjust breakpoint as needed

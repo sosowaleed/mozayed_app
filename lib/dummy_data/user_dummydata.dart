@@ -19,7 +19,10 @@ ListingItem generateDummyListingItem() {
     ],
     price: random.nextDouble() * 100 + 1,
     condition: faker.randomGenerator
-        .element(['New', 'Used: Good', 'Used: Fair']),
+        .element(["New", "Used: feels new", "Used: good", "Used: acceptable"]),
+    saleType: faker.randomGenerator.element([SaleType.bid, SaleType.buyNow]),
+    category: faker.randomGenerator
+        .element(["Furniture","Electronics", "Clothing", "Home", "Books", "Toys", "Other"]),
     location: ListingLocation(
       lat: faker.geo.latitude(),
       lng: faker.geo.longitude(),

@@ -17,7 +17,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedIndex = 0;
 
-  // Only include main navigation items: Home, Cart, Sell.
+  // Main navigation items: Home, Cart, Sell.
   final List<Map<String, dynamic>> _mainMenuItems = [
     {
       'title': 'Home',

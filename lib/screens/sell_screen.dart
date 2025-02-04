@@ -21,6 +21,10 @@ class SellScreen extends ConsumerStatefulWidget {
 }
 
 class _SellScreenState extends ConsumerState<SellScreen> {
+  final List<String> _conditions = ["New", "Used: feels new", "Used: good", "Used: acceptable"];
+  final List<String> _categoryOptions = ["Furniture","Electronics", "Clothing", "Home", "Books", "Toys", "Other"];
+  String _selectedCondition = "New"; // Default condition
+  String _selectedCategory = "Other"; // default category
   final _formKey = GlobalKey<FormState>();
   final Map<String, dynamic> _listingData = {};
   bool _isGettingLocation = false;
@@ -30,9 +34,6 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   // List to hold the picked images
   final List<XFile> _pickedImages = [];
   final ImagePicker _picker = ImagePicker();
-
-  final List<String> _conditions = ["New", "Used: feels new", "Used: good", "Used: acceptable"];
-  String _selectedCondition = "New"; // Default condition
 
   /// Opens the image picker and lets the user choose an image from gallery or camera.
   Future<void> _pickImage(ImageSource source) async {
@@ -105,6 +106,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
       condition: _listingData["condition"],
       quantity: int.parse(_listingData["quantity"]),
       saleType: _saleType,
+      category: _listingData["category"],
       location: _listingData["location"] != null
           ? ListingLocation.fromMap(_listingData["location"])
           : null,
@@ -261,6 +263,35 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                           _saleType = value ?? SaleType.buyNow;
                         });
                       },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Text("Category: "),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: "Select Category",
+                        ),
+                        value: _selectedCategory,
+                        items: _categoryOptions.map((category) {
+                          return DropdownMenuItem<String>(
+                            value: category,
+                            child: Text(category),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedCategory = val ?? "Other";
+                          });
+                        },
+                        onSaved: (val) {
+                          _listingData["category"] = val;
+                        },
+                      ),
                     ),
                   ],
                 ),
