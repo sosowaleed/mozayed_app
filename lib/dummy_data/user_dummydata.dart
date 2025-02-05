@@ -29,6 +29,7 @@ ListingItem generateDummyListingItem() {
       address: faker.address.streetAddress(),
       city: faker.address.city(),
       zip: faker.address.zipCode(),
+      country: faker.randomGenerator.element([faker.address.country(), "Saudi Arabia"]),
     ),
   );
 }
