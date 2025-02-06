@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:developer';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:http/http.dart' as http;
 import 'package:geocoding/geocoding.dart' as geo;
 import 'dart:convert';
@@ -10,6 +11,8 @@ import 'package:mozayed_app/models/listing_model.dart';
 import 'package:mozayed_app/providers/listing_provider.dart';
 import 'package:mozayed_app/screens/static_flutter_map_screen.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EditListingScreen extends ConsumerStatefulWidget {
   final ListingItem listing;
@@ -20,7 +23,15 @@ class EditListingScreen extends ConsumerStatefulWidget {
 }
 
 class _EditListingScreenState extends ConsumerState<EditListingScreen> {
-  final List<String> _categoryOptions = ["Furniture","Electronics", "Clothing", "Home", "Books", "Toys", "Other"];
+  final List<String> _categoryOptions = [
+    "Furniture",
+    "Electronics",
+    "Clothing",
+    "Home",
+    "Books",
+    "Toys",
+    "Other"
+  ];
   String _selectedCategory = "Other";
   final _formKey = GlobalKey<FormState>();
   late Map<String, dynamic> _listingData;
@@ -29,6 +40,8 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
   SaleType _saleType = SaleType.buyNow;
   final List<XFile> _pickedImages = [];
   final ImagePicker _picker = ImagePicker();
+  late PageController _pageController;
+  final List<String> _removedImageUrls = [];
 
   @override
   void initState() {
@@ -46,10 +59,32 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     };
     _address = widget.listing.location?.address;
     _saleType = widget.listing.saleType;
+    _pageController = PageController();
+  }
+
+  // Uploading images to Firebase Storage
+  Future<String> uploadImage(
+      File imageFile, String listingId, int index) async {
+    final storageRef = FirebaseStorage.instance
+        .ref()
+        .child("listing_images")
+        .child(listingId)
+        .child("image_$index.jpg");
+
+    // Uploading file.
+    UploadTask uploadTask = storageRef.putFile(imageFile);
+
+    // Waiting for completion.
+    TaskSnapshot snapshot = await uploadTask;
+
+    // returning download URL.
+    String downloadUrl = await snapshot.ref.getDownloadURL();
+    return downloadUrl;
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    final pickedFile = await _picker.pickImage(source: source, imageQuality: 80);
+    final pickedFile =
+        await _picker.pickImage(source: source, imageQuality: 80);
     if (pickedFile != null) {
       setState(() {
         _pickedImages.add(pickedFile);
@@ -60,9 +95,9 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
   // TODO: replace with google maps implementation.
   /// Opens the map picker (existing implementation) to select a location.
   Future<void> _loadMapPicker() async {
-    List<double>? pickedLocation = await Navigator.of(context).push<List<double>>(
-        MaterialPageRoute(builder: (ctx) => const StaticMapPickerScreen()
-        ));
+    List<double>? pickedLocation = await Navigator.of(context)
+        .push<List<double>>(
+            MaterialPageRoute(builder: (ctx) => const StaticMapPickerScreen()));
     setState(() {
       _isGettingLocation = true;
     });
@@ -77,7 +112,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
         lang: Localizations.localeOf(context),
       );
 
-      if(address["display_name"] != "address not found") {
+      if (address["display_name"] != "address not found") {
         _listingData["location"] = {
           "lat": pickedLocation[0],
           "lng": pickedLocation[1],
@@ -93,11 +128,50 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
         _isGettingLocation = false;
       });
     } else {
-      String address = await _getAddressFromLatLng(pickedLocation![0], pickedLocation[1]);
+      String address =
+          await _getAddressFromLatLng(pickedLocation![0], pickedLocation[1]);
       setState(() {
-        _address =  address;
+        _address = address;
         _isGettingLocation = false;
       });
+    }
+  }
+
+  void _removeImage({String? imageUrl, XFile? xFile}) {
+    setState(() {
+      if (imageUrl != null) {
+        // Cast the existing images list to List<String>
+        List<String> currentImages =
+            List<String>.from(_listingData["image"] ?? []);
+        currentImages.remove(imageUrl);
+        _listingData["image"] = currentImages;
+        _removedImageUrls.add(imageUrl);
+      }
+      if (xFile != null) {
+        _pickedImages.remove(xFile);
+      }
+    });
+  }
+
+  Future<void> _deleteImageFromFirebaseStorageAndFirestore(
+      String imageUrl, String listingId) async {
+    if (imageUrl.isNotEmpty) {
+      try {
+        // Delete from Firebase Storage
+        await FirebaseStorage.instance.refFromURL(imageUrl).delete();
+
+        // Delete reference from Firestore
+        final docRef =
+            FirebaseFirestore.instance.collection('listings').doc(listingId);
+        final doc = await docRef.get();
+        if (doc.exists && doc.data() != null) {
+          List<dynamic> images = doc.data()!['image'] ?? [];
+          images.remove(imageUrl);
+          await docRef.update({'image': images});
+        }
+      } catch (e) {
+        log("Error deleting image from Firebase: $e");
+      }
     }
   }
 
@@ -105,10 +179,25 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
 
+    // Upload all newly picked images to Firebase Storage and get their URLs.
+    List<String> newImageUrls = [];
+    for (int i = 0; i < _pickedImages.length; i++) {
+      File imageFile = File(_pickedImages[i].path);
+      String url = await uploadImage(imageFile, widget.listing.id, i);
+      newImageUrls.add(url);
+    }
 
-    // TODO: upload image to firebase storage.
-    List<String> updatedImages = List<String>.from(_listingData["image"]);
-    updatedImages.addAll(_pickedImages.map((xFile) => xFile.path));
+    // Delete removed images from Firebase Storage.
+    for (String imageUrl in _removedImageUrls) {
+      await _deleteImageFromFirebaseStorageAndFirestore(
+          imageUrl, widget.listing.id);
+    }
+
+    // Merge remaining existing images with new ones.
+    List<String> updatedImages = List<String>.from(_listingData["image"] ?? []);
+    updatedImages.addAll(newImageUrls);
+    // Remove duplicates if necessary.
+    updatedImages = updatedImages.toSet().toList();
     _listingData["image"] = updatedImages;
 
     final updatedListing = ListingItem(
@@ -117,7 +206,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       ownerName: widget.listing.ownerName,
       title: _listingData["title"],
       description: _listingData["description"],
-      image: _listingData["image"],
+      image: updatedImages,
       price: double.parse(_listingData["price"]),
       condition: _listingData["condition"],
       quantity: int.parse(_listingData["quantity"]),
@@ -128,10 +217,25 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
           : null,
     );
 
-    // Update the listing via the provider (you would need to implement an update method)
+    // Update the listing via the provider.
     await ref.read(listingsProvider.notifier).updateListing(updatedListing);
-    if(mounted) {
+    if (mounted) {
       Navigator.of(context).pop();
+    }
+  }
+
+  void _previousImage() {
+    if (_pageController.page! > 0) {
+      _pageController.previousPage(
+          duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    }
+  }
+
+  void _nextImage() {
+    if (_pageController.page! <
+        _listingData["image"].length + _pickedImages.length - 1) {
+      _pageController.nextPage(
+          duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     }
   }
 
@@ -150,17 +254,96 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
               children: [
                 // Images Preview (existing images + newly picked ones)
                 SizedBox(
-                  height: 200,
-                  child: PageView(
+                  height: 250,
+                  child: Stack(
                     children: [
-                      // Display pre-existing images
-                      ...(_listingData["image"] as List<String>).map((imgUrl) {
-                        return Image.network(imgUrl, fit: BoxFit.cover);
-                      }),
-                      // Display newly picked images
-                      ..._pickedImages.map((xFile) {
-                        return Image.file(File(xFile.path), fit: BoxFit.cover);
-                      }),
+                      PageView(
+                        controller: _pageController,
+                        children: [
+                          ...(_listingData["image"] as List<String>)
+                              .map((imgUrl) => Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      Image.network(imgUrl, fit: BoxFit.cover),
+                                      Positioned(
+                                        top: 5,
+                                        left: 0,
+                                        right: 0,
+                                        child: IconButton(
+                                          icon: const Icon(
+                                            Icons.close,
+                                            color: Colors.red,
+                                          ),
+                                          onPressed: () => _removeImage(
+                                              imageUrl: imgUrl, xFile: null),
+                                        ),
+                                      ),
+                                    ],
+                                  )),
+                          ..._pickedImages.map((xFile) => Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  Image.file(File(xFile.path),
+                                      fit: BoxFit.cover),
+                                  Positioned(
+                                    top: 8,
+                                    left: 0,
+                                    right: 0,
+                                    child: IconButton(
+                                      icon: const Icon(
+                                        Icons.close,
+                                        color: Colors.red,
+                                      ),
+                                      onPressed: () => _removeImage(
+                                          imageUrl: null, xFile: xFile),
+                                    ),
+                                  ),
+                                ],
+                              )),
+                        ],
+                      ),
+                      // Previous arrow
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        child: IconButton(
+                          padding: const EdgeInsets.all(32),
+                          icon: const Icon(
+                            Icons.arrow_back_ios,
+                            size: 15,
+                            color: Colors.grey,
+                          ),
+                          onPressed: _previousImage,
+                        ),
+                      ),
+                      // Next arrow
+                      Positioned(
+                        right: 0,
+                        top: 5,
+                        bottom: 0,
+                        child: IconButton(
+                          padding: const EdgeInsets.all(32),
+                          icon: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 15,
+                            color: Colors.grey,
+                          ),
+                          onPressed: _nextImage,
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 8,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: Text(
+                            '${(_pageController.hasClients && _pageController.page != null ? (_pageController.page! + 1).toInt() : 1)} / ${(_listingData["image"] as List).length + _pickedImages.length}',
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 18),
+                          ),
+                        ),
+                      )
                     ],
                   ),
                 ),
@@ -357,14 +540,15 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
   Future _getAddressFromLatLng(double latitude, double longitude) async {
     try {
       final List<geo.Placemark> placeMarks =
-      await geo.placemarkFromCoordinates(latitude, longitude);
+          await geo.placemarkFromCoordinates(latitude, longitude);
       if (placeMarks.isNotEmpty) {
         final geo.Placemark place = placeMarks.first;
 
         _listingData["location"] = {
           "lat": latitude,
           "lng": longitude,
-          "address": '${place.street}, ${place.locality}, ${place.administrativeArea}, ${place.country}',
+          "address":
+              '${place.street}, ${place.locality}, ${place.administrativeArea}, ${place.country}',
           "city": place.locality,
           "zip": place.postalCode,
           "country": place.country,
@@ -382,5 +566,4 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       });
     }
   }
-
 }
