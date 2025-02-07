@@ -55,10 +55,17 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       "condition": widget.listing.condition,
       "category": widget.listing.category,
       "location": widget.listing.location?.toMap(),
-      "image": widget.listing.image,
+      "image": widget.listing.image, // existing image URLs
+      "bidEndTime": widget.listing.bidEndTime?.toIso8601String(),
+      "startingBid": widget.listing.startingBid?.toString(),
+      "currentHighestBid": widget.listing.currentHighestBid?.toString(),
+      "currentHighestBidderId": widget.listing.currentHighestBidderId,
+      "bidHistory": widget.listing.bidHistory,
+      "bidFinalized": widget.listing.bidFinalized,
     };
     _address = widget.listing.location?.address;
     _saleType = widget.listing.saleType;
+    _selectedCategory = widget.listing.category;
     _pageController = PageController();
   }
 
@@ -179,7 +186,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
 
-    // Upload all newly picked images to Firebase Storage and get their URLs.
+    // Upload newly picked images to Firebase Storage and collect their download URLs.
     List<String> newImageUrls = [];
     for (int i = 0; i < _pickedImages.length; i++) {
       File imageFile = File(_pickedImages[i].path);
@@ -187,34 +194,68 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       newImageUrls.add(url);
     }
 
-    // Delete removed images from Firebase Storage.
+    // Delete removed images from Firebase Storage and remove them from Firestore reference.
     for (String imageUrl in _removedImageUrls) {
-      await _deleteImageFromFirebaseStorageAndFirestore(
-          imageUrl, widget.listing.id);
+      await _deleteImageFromFirebaseStorageAndFirestore(imageUrl, widget.listing.id);
     }
 
     // Merge remaining existing images with new ones.
-    List<String> updatedImages = List<String>.from(_listingData["image"] ?? []);
+    List<String> updatedImages =
+    List<String>.from(_listingData["image"] ?? []);
     updatedImages.addAll(newImageUrls);
-    // Remove duplicates if necessary.
-    updatedImages = updatedImages.toSet().toList();
+    updatedImages = updatedImages.toSet().toList(); // Remove duplicates
     _listingData["image"] = updatedImages;
 
+    // Parse bid-related fields if sale type is bid, but use existing data if no new value is provided.
+    DateTime? bidEndTime;
+    double? startingBid;
+    double? currentHighestBid;
+    if (_saleType == SaleType.bid) {
+      // Use new bid end time if provided; otherwise, use existing value.
+      if (_listingData["bidEndTime"] != null &&
+          _listingData["bidEndTime"].toString().trim().isNotEmpty) {
+        bidEndTime = DateTime.parse(_listingData["bidEndTime"]);
+      } else {
+        bidEndTime = widget.listing.bidEndTime;
+      }
+      // Use new starting bid if provided; otherwise, use existing value.
+      if (_listingData["startingBid"] != null &&
+          _listingData["startingBid"].toString().trim().isNotEmpty) {
+        startingBid = double.parse(_listingData["startingBid"]);
+      } else {
+        startingBid = widget.listing.startingBid;
+      }
+      // Preserve current highest bid if it exists; otherwise, initialize it.
+      currentHighestBid =
+          widget.listing.currentHighestBid ?? startingBid;
+    }
+
+    // Create the updated listing by merging new values with existing ones.
     final updatedListing = ListingItem(
       id: widget.listing.id,
       ownerId: widget.listing.ownerId,
       ownerName: widget.listing.ownerName,
-      title: _listingData["title"],
-      description: _listingData["description"],
+      title: _listingData["title"] ?? widget.listing.title,
+      description: _listingData["description"] ?? widget.listing.description,
       image: updatedImages,
-      price: double.parse(_listingData["price"]),
-      condition: _listingData["condition"],
-      quantity: int.parse(_listingData["quantity"]),
+      price: _listingData["price"] != null
+          ? double.parse(_listingData["price"])
+          : widget.listing.price,
+      condition: _listingData["condition"] ?? widget.listing.condition,
+      quantity: _listingData["quantity"] != null
+          ? int.parse(_listingData["quantity"])
+          : widget.listing.quantity,
       saleType: _saleType,
-      category: _listingData["category"],
+      category: _listingData["category"] ?? widget.listing.category,
       location: _listingData["location"] != null
           ? ListingLocation.fromMap(_listingData["location"])
-          : null,
+          : widget.listing.location,
+      bidEndTime: bidEndTime,
+      startingBid: startingBid,
+      currentHighestBid: currentHighestBid,
+      currentHighestBidderId: widget.listing.currentHighestBidderId,
+      bidHistory: widget.listing.bidHistory ?? [],
+      bidFinalized: widget.listing.bidFinalized,
     );
 
     // Update the listing via the provider.
@@ -223,6 +264,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       Navigator.of(context).pop();
     }
   }
+
 
   void _previousImage() {
     if (_pageController.page! > 0) {
@@ -245,6 +287,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       appBar: AppBar(
         title: const Text("Edit Listing"),
       ),
+      backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -386,20 +429,23 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                     _listingData["description"] = value;
                   },
                 ),
-                TextFormField(
-                  initialValue: _listingData["price"],
-                  decoration: const InputDecoration(labelText: "Price"),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || double.tryParse(value) == null) {
-                      return "Please enter a valid price.";
-                    }
-                    return null;
-                  },
-                  onSaved: (value) {
-                    _listingData["price"] = value;
-                  },
-                ),
+                if (_saleType != SaleType.bid)
+                  TextFormField(
+                    initialValue: _listingData["price"],
+                    decoration: const InputDecoration(labelText: "Price"),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || double.tryParse(value) == null) {
+                        return "Please enter a valid price.";
+                      } else if (double.parse(value) <= 0) {
+                        return "Price must be greater than 0.";
+                      }
+                      return null;
+                    },
+                    onSaved: (value) {
+                      _listingData["price"] = value;
+                    },
+                  ),
                 TextFormField(
                   initialValue: _listingData["quantity"],
                   decoration: const InputDecoration(labelText: "Quantity"),
@@ -407,6 +453,8 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                   validator: (value) {
                     if (value == null || int.tryParse(value) == null) {
                       return "Please enter a valid quantity.";
+                    } else if (int.parse(value) <= 0) {
+                      return "Quantity must be greater than 0.";
                     }
                     return null;
                   },
@@ -445,6 +493,59 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
+
+                if (_saleType == SaleType.bid) ...[
+                  // Bid End Time Picker
+                  ElevatedButton(
+                    onPressed: () async {
+                      DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate:
+                            DateTime.now().add(const Duration(days: 1)),
+                        firstDate: DateTime.now(),
+                        lastDate: _listingData["bidEndTime"] != null
+                            ? DateTime.parse(_listingData["bidEndTime"])
+                            : DateTime.now().add(const Duration(days: 7)),
+                      );
+                      if (picked != null) {
+                        // Optionally show time picker as well.
+                        setState(() {
+                          _listingData["bidEndTime"] = picked.toIso8601String();
+                        });
+                      }
+                    },
+                    child: Text(
+                      _listingData["bidEndTime"] != null
+                          ? "Bid End: ${_listingData["bidEndTime"]}"
+                          : "Select Bid End Time",
+                    ),
+                  ),
+                  // Starting Bid Field
+                  if (_listingData["startingBid"] == null)
+                    TextFormField(
+                      decoration:
+                      const InputDecoration(labelText: "Starting Bid"),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || double.tryParse(value) == null) {
+                          return "Please enter a valid starting bid.";
+                        } else if (double.parse(value) <= 0) {
+                          return "Starting bid must be greater than 0.";
+                        }
+                        return null;
+                      },
+                      onSaved: (value) {
+                        _listingData["startingBid"] = value;
+                      },
+                    ),
+                  if (_listingData["currentHighestBid"] != null)
+                    const SizedBox(height: 12),
+                  Text(
+                    "Current Highest Bid: \$${_listingData["currentHighestBid"]}",
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+
                 Row(
                   children: [
                     const Text("Category: "),

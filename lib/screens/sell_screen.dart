@@ -162,6 +162,21 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     // Set the image URLs in _listingData.
     _listingData["image"] = imageUrls;
 
+    // Parse bid-related fields if sale type is bid.
+    DateTime? bidEndTime;
+    double? startingBid;
+    double? currentHighestBid;
+    if (_saleType == SaleType.bid) {
+      if (_listingData["bidEndTime"] != null) {
+        bidEndTime = DateTime.parse(_listingData["bidEndTime"]);
+      }
+      if (_listingData["startingBid"] != null) {
+        _listingData["price"] = _listingData["startingBid"];
+        startingBid = double.parse(_listingData["startingBid"]);
+        currentHighestBid = startingBid;
+      }
+    }
+
     final listing = ListingItem(
       id: listingId,
       ownerId: user.id,
@@ -177,6 +192,12 @@ class _SellScreenState extends ConsumerState<SellScreen> {
       location: _listingData["location"] != null
           ? ListingLocation.fromMap(_listingData["location"])
           : null,
+      bidEndTime: bidEndTime,
+      startingBid: startingBid,
+      currentHighestBid: currentHighestBid,
+      currentHighestBidderId: null,
+      bidHistory: [],
+      bidFinalized: false,
     );
 
     await ref.read(listingsProvider.notifier).addListing(listing);
@@ -184,7 +205,6 @@ class _SellScreenState extends ConsumerState<SellScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Published Successfully")),
       );
-      Navigator.of(context).pop();
     }
   }
 
@@ -247,9 +267,6 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     UserModel user = UserModel.fromMap(ref.read(userDataProvider).value!);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Sell an Item"),
-      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -382,21 +399,22 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                     _listingData["description"] = value;
                   },
                 ),
-                TextFormField(
-                  decoration: const InputDecoration(labelText: "Price"),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || double.tryParse(value) == null) {
-                      return "Please enter a valid price.";
-                    } else if (double.parse(value) <= 0) {
-                      return "Price must be greater than zero.";
-                    }
-                    return null;
-                  },
-                  onSaved: (value) {
-                    _listingData["price"] = value;
-                  },
-                ),
+                if (_saleType != SaleType.bid)
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: "Price"),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || double.tryParse(value) == null) {
+                        return "Please enter a valid price.";
+                      } else if (double.parse(value) <= 0) {
+                        return "Price must be greater than zero.";
+                      }
+                      return null;
+                    },
+                    onSaved: (value) {
+                      _listingData["price"] = value;
+                    },
+                  ),
                 TextFormField(
                   decoration: const InputDecoration(labelText: "Quantity"),
                   keyboardType: TextInputType.number,
@@ -453,6 +471,45 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
+                if (_saleType == SaleType.bid) ...[
+                  // Bid End Time Picker
+                  ElevatedButton(
+                    onPressed: () async {
+                      DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now().add(const Duration(days: 1)),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 30)),
+                      );
+                      if (picked != null) {
+                        // Optionally show time picker as well.
+                        setState(() {
+                          _listingData["bidEndTime"] = picked.toIso8601String();
+                        });
+                      }
+                    },
+                    child: Text(
+                      _listingData["bidEndTime"] != null
+                          ? "Bid End: ${_listingData["bidEndTime"]}"
+                          : "Select Bid End Time",
+                    ),
+                  ),
+                  // Starting Bid Field
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: "Starting Bid"),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || double.tryParse(value) == null) {
+                        return "Please enter a valid starting bid.";
+                      }
+                      return null;
+                    },
+                    onSaved: (value) {
+                      _listingData["startingBid"] = value;
+                    },
+                  ),
+                ],
+
                 Row(
                   children: [
                     const Text("Category: "),

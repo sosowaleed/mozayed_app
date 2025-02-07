@@ -26,6 +26,21 @@ class ListingsNotifier extends StateNotifier<AsyncValue<List<ListingItem>>> {
           .collection('listings')
           .doc(listing.id)
           .set(listing.toMap());
+      // If the listing is a bid listing, add a corresponding document in "bids".
+      if (listing.saleType == SaleType.bid) {
+        await FirebaseFirestore.instance
+            .collection('bids')
+            .doc(listing.id)
+            .set({
+          'listingId': listing.id,
+          'ownerId': listing.ownerId,
+          'bidEndTime': listing.bidEndTime?.toIso8601String(),
+          'currentHighestBid': listing.startingBid ?? listing.price,
+          'currentHighestBidderId': null,
+          'bidHistory': [],
+          'bidFinalized': false,
+        });
+      }
       // we have two options
       // Option 1: Re-fetch all listings
       await fetchListings();
@@ -41,6 +56,18 @@ class ListingsNotifier extends StateNotifier<AsyncValue<List<ListingItem>>> {
           .collection('listings')
           .doc(updatedListing.id)
           .update(updatedListing.toMap());
+      if (updatedListing.saleType == SaleType.bid) {
+        await FirebaseFirestore.instance
+            .collection('bids')
+            .doc(updatedListing.id)
+            .update({
+          'bidEndTime': updatedListing.bidEndTime?.toIso8601String(),
+          'currentHighestBid': updatedListing.currentHighestBid,
+          'currentHighestBidderId': updatedListing.currentHighestBidderId,
+          'bidHistory': updatedListing.bidHistory,
+          'bidFinalized': updatedListing.bidFinalized,
+        });
+      }
       // same options as above, re-fetch listings or update list locally.
       await fetchListings();
     } catch (e) {

@@ -31,6 +31,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(widget.listingItem.title, style: const TextStyle(fontSize: 18)),
         leading: IconButton(

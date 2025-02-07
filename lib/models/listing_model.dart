@@ -18,6 +18,14 @@ class ListingItem {
   final int quantity;
   final SaleType saleType; // Determines whether bidding is enabled
   final String category;
+  // --- Bidding fields (only used if saleType is bid) ---
+  final DateTime? bidEndTime;
+  final double? startingBid; // initial bid amount
+  final double? currentHighestBid;
+  final String? currentHighestBidderId;
+  final List<Map<String, dynamic>>? bidHistory; // each entry: {bidderId, bidAmount, bidTime}
+  final bool bidFinalized;
+
 
   ListingItem({
     String? id,
@@ -32,6 +40,12 @@ class ListingItem {
     this.quantity = 1,
     this.saleType = SaleType.buyNow,
     required this.category,
+    this.bidEndTime,
+    this.startingBid,
+    this.currentHighestBid,
+    this.currentHighestBidderId,
+    this.bidHistory,
+    this.bidFinalized = false,
   }) : id = id ?? uuid.v4();
 
   Map<String, dynamic> toMap() {
@@ -48,6 +62,12 @@ class ListingItem {
       'quantity': quantity,
       'saleType': saleType.toString().split('.').last,
       'category': category,
+      'bidEndTime': bidEndTime?.toIso8601String(),
+      'startingBid': startingBid,
+      'currentHighestBid': currentHighestBid,
+      'currentHighestBidderId': currentHighestBidderId,
+      'bidHistory': bidHistory,
+      'bidFinalized': bidFinalized,
     };
   }
 
@@ -65,6 +85,12 @@ class ListingItem {
       quantity: map['quantity'] ?? 1,
       saleType: (map['saleType'] as String).toLowerCase() == 'bid' ? SaleType.bid : SaleType.buyNow,
       category: map['category'] ?? "Other",
+      bidEndTime: map['bidEndTime'] != null ? DateTime.parse(map['bidEndTime']) : null,
+      startingBid: map['startingBid'] != null ? (map['startingBid'] as num).toDouble() : null,
+      currentHighestBid: map['currentHighestBid'] != null ? (map['currentHighestBid'] as num).toDouble() : null,
+      currentHighestBidderId: map['currentHighestBidderId'],
+      bidHistory: map['bidHistory'] != null ? List<Map<String, dynamic>>.from(map['bidHistory']) : null,
+      bidFinalized: map['bidFinalized'] ?? false,
     );
   }
 }

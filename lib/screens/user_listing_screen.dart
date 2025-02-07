@@ -14,6 +14,7 @@ class MyListingsScreen extends ConsumerWidget {
     final currentUserId = ref.watch(userDataProvider).value?['id'];
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(title: const Text("My Listings")),
       body: listingsAsync.when(
         data: (listings) {

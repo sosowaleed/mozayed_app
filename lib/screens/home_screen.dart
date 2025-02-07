@@ -128,6 +128,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         final isPhone = constraints.maxWidth < 650;
 
         return Scaffold(
+          backgroundColor: Colors.white,
           appBar: AppBar(
             title: Text(
               _mainMenuItems[_selectedIndex]['title'] == 'Home'

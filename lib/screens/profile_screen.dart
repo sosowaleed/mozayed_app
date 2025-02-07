@@ -102,6 +102,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _address ??= user.location.address;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const AutoSizeText("Profile"),
       ),
