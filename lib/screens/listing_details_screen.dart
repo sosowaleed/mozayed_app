@@ -170,51 +170,54 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
             ),
             // Metadata Section.
             Expanded(
-              flex: 4,
-              child: ListView(
+              flex: 7,
+              child: Padding(
                 padding: const EdgeInsets.all(16.0),
-                children: [
-                  Text(
-                    "Condition: ${listing.condition}",
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Price: \$${listing.price.toStringAsFixed(2)}",
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Quantity: ${listing.quantity}",
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 8),
-                  // Distance Indicator.
-                  Text(
-                    "Distance: ${(Geolocator.distanceBetween(
-                      user.location.lat,
-                      user.location.lng,
-                      widget.listingItem.location!.lat,
-                      widget.listingItem.location!.lng,
-                    ) /
-                        1000).toStringAsFixed(1)} km",
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    "Description:",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 5),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Text(
-                        listing.description,
-                        style: const TextStyle(fontSize: 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Condition: ${listing.condition}",
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Price: \$${listing.price.toStringAsFixed(2)}",
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Quantity: ${listing.quantity}",
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 8),
+                    // Distance Indicator.
+                    Text(
+                      "Distance: ${(Geolocator.distanceBetween(
+                        user.location.lat,
+                        user.location.lng,
+                        widget.listingItem.location!.lat,
+                        widget.listingItem.location!.lng,
+                      ) /
+                          1000).toStringAsFixed(1)} km",
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      "Description:",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 5),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Text(
+                          listing.description,
+                          style: const TextStyle(fontSize: 14),
+                        ),
                       ),
                     ),
-                  ),
-                ]
+                  ],
+                ),
               ),
             ),
             const Spacer(),
