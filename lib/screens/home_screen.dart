@@ -34,7 +34,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     {
       'title': 'Sell',
       'icon': Icons.add_box,
-      'screen': const SellScreen(),
+      'screen': const SellScreen(showBackButton: false),
     },
   ];
 

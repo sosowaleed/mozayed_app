@@ -15,7 +15,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 class SellScreen extends ConsumerStatefulWidget {
-  const SellScreen({super.key});
+  final bool showBackButton;
+  const SellScreen({super.key, this.showBackButton = false});
 
   @override
   ConsumerState<SellScreen> createState() => _SellScreenState();
@@ -275,6 +276,9 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     UserModel user = UserModel.fromMap(ref.read(userDataProvider).value!);
 
     return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: widget.showBackButton, // This will show the back button
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mozayed_app/providers/user_and_auth_provider.dart';
 import 'package:mozayed_app/providers/listing_provider.dart';
+import 'package:mozayed_app/screens/sell_screen.dart';
 import 'edit_listing_screen.dart';
 
 class MyListingsScreen extends ConsumerWidget {
@@ -38,7 +39,7 @@ class MyListingsScreen extends ConsumerWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => EditListingScreen(listing: listing),
+                      builder: (context) => const SellScreen(showBackButton: true),
                     ),
                   );
                 },
@@ -48,6 +49,16 @@ class MyListingsScreen extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, st) => Center(child: Text("Error: $err")),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+              MaterialPageRoute(builder: (context) => const SellScreen(showBackButton: true)), // Navigate to SellScreen with back button          );
+          );
+          },
+        backgroundColor: Colors.green,
+        child: const Icon(Icons.add),
       ),
     );
   }
