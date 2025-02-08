@@ -39,11 +39,11 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
     });
   }
 
-  void _handleBuy(WidgetRef ref) {
+  void _handleBuy() {
     // Add listing to cart
     ref.read(cartProvider.notifier).addToCart(widget.listingItem);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Item added to cart")),
+      const SnackBar(content: Text("Item added to cart"), duration: Duration(seconds: 2),),
     );
   }
 
@@ -54,7 +54,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
         widget.listingItem.price;
     if (enteredBid == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a valid bid.")),
+        const SnackBar(content: Text("Please enter a valid bid."), duration: Duration(seconds: 2),),
       );
       return;
     }
@@ -62,13 +62,14 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Your bid must be higher than \$${currentBid.toStringAsFixed(2)}"),
+          duration: const Duration(seconds: 2),
         ),
       );
       return;
     }
     if (DateTime.now().isAfter(widget.listingItem.bidEndTime!)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Bid time has expired.")),
+        const SnackBar(content: Text("Bid time has expired.") , duration: Duration(seconds: 2),),
       );
       return;
     }
@@ -120,7 +121,8 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content:
-                  Text("Bid of \$${enteredBid.toStringAsFixed(2)} placed!")),
+                  Text("Bid of \$${enteredBid.toStringAsFixed(2)} placed!"),
+            duration: const Duration(seconds: 2),),
         );
         // Clear the bid input.
         _bidController.clear();
@@ -282,7 +284,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                 ],
               )
                   : ElevatedButton(
-                onPressed: () => _handleBuy(ref),
+                onPressed: () => _handleBuy(),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 0),
                   fixedSize: Size(

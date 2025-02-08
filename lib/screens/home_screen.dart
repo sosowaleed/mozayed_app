@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mozayed_app/layouts/home_content_layout.dart';
 import 'package:mozayed_app/providers/user_and_auth_provider.dart';
+import 'package:mozayed_app/screens/cart_screen.dart';
 import 'package:mozayed_app/screens/profile_screen.dart';
 import 'package:mozayed_app/screens/sell_screen.dart';
 import 'package:mozayed_app/screens/user_listing_screen.dart';
+import 'package:mozayed_app/providers/cart_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -27,7 +29,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     {
       'title': 'Cart',
       'icon': Icons.shopping_cart,
-      'screen': const Center(child: Text('Shopping Cart')),
+      'screen': const CartScreen(),
     },
     {
       'title': 'Sell',
@@ -49,7 +51,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         );
       },
-    },{
+    },
+    {
       'title': const Text('My items'),
       'icon': Icons.list_alt,
       'onTap': (context) {
@@ -79,7 +82,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     },
     {
       'title': const Text(
-          'Sign Out',
+        'Sign Out',
         style: TextStyle(color: Colors.red),
       ),
       'icon': Icons.logout,
@@ -121,6 +124,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final carData = ref.watch(cartProvider);
     final userData = ref.watch(userDataProvider); // if needed for display
 
     return LayoutBuilder(
@@ -146,44 +150,73 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           body: isPhone
               ? _mainMenuItems[_selectedIndex]['screen']
               : Row(
-            children: [
-              // Always-open drawer-like widget
-              Container(
-                width: 200,
-                color: Colors.grey[100],
-                child: ListView(
-                  children: _mainMenuItems.map((item) {
-                    final index = _mainMenuItems.indexOf(item);
-                    return ListTile(
-                      leading: Icon(item['icon']),
-                      title: Text(item['title']),
-                      selected: index == _selectedIndex,
-                      style: ListTileStyle.drawer,
-                      onTap: () => _onMainItemTapped(index),
-                    );
-                  }).toList(),
+                  children: [
+                    // Always-open drawer-like widget
+                    Container(
+                      width: 200,
+                      color: Colors.grey[100],
+                      child: ListView(
+                        children: _mainMenuItems.map((item) {
+                          final index = _mainMenuItems.indexOf(item);
+                          return ListTile(
+                            leading: Icon(item['icon']),
+                            title: Text(item['title']),
+                            trailing: item['title'] == 'Cart'
+                                ? carData.isNotEmpty ? Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${carData.length}',
+                                style: const TextStyle(color: Colors.white, fontSize: 12),
+                              ),
+                            ) : null
+                                : null,
+                            selected: index == _selectedIndex,
+                            style: ListTileStyle.drawer,
+                            onTap: () => _onMainItemTapped(index),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    // Main content area
+                    Expanded(
+                      child: _mainMenuItems[_selectedIndex]['screen'],
+                    ),
+                  ],
                 ),
-              ),
-              // Main content area
-              Expanded(
-                child: _mainMenuItems[_selectedIndex]['screen'],
-              ),
-            ],
-          ),
           bottomNavigationBar: isPhone
               ? BottomNavigationBar(
-            items: _mainMenuItems
-                .map(
-                  (item) => BottomNavigationBarItem(
-                icon: Icon(item['icon']),
-                label: item['title'],
-                backgroundColor: Theme.of(context).colorScheme.primary,
-              ),
-            )
-                .toList(),
-            currentIndex: _selectedIndex,
-            onTap: _onMainItemTapped,
-          )
+                  items: _mainMenuItems
+                      .map(
+                        (item) => BottomNavigationBarItem(
+                          icon: Stack(
+                            children: [
+                              Icon(item['icon']),
+                              if (item['title'] == 'Cart' && carData.isNotEmpty)
+                                Positioned(
+                                  right: 0,
+                                  child: CircleAvatar(
+                                    backgroundColor: Colors.red,
+                                    radius: 8,
+                                    child: Text('${carData.length}',
+                                        style: const TextStyle(
+                                            fontSize: 10, color: Colors.white)),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          label: item['title'],
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
+                        ),
+                      )
+                      .toList(),
+                  currentIndex: _selectedIndex,
+                  onTap: _onMainItemTapped,
+                )
               : null,
         );
       },

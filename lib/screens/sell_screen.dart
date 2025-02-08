@@ -43,6 +43,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   // Initialize _listingData with an empty image list.
   final Map<String, dynamic> _listingData = {"image": <String>[]};
   bool _isGettingLocation = false;
+  bool _isLoading = false;
   String? _address;
   SaleType _saleType = SaleType.buyNow; // Default to Buy Now
 
@@ -147,6 +148,9 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   Future<void> _saveListing(UserModel user) async {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
+    setState(() {
+      _isLoading = true;
+    });
 
     // Generate a unique ID for the listing.
     String listingId = uuid.v4();
@@ -205,7 +209,11 @@ class _SellScreenState extends ConsumerState<SellScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Published Successfully")),
       );
+
     }
+    setState(() {
+      _isLoading = false;
+      });
   }
 
   Future _getAddressFromLatLngWeb({
@@ -542,7 +550,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                 // Location Picker
                 Column(
                   children: [
-                    TextButton.icon(
+                    ElevatedButton.icon(
                       icon: const Icon(Icons.map),
                       onPressed: _loadMapPicker,
                       label: const Text("Select Location"),
@@ -553,10 +561,16 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () => _saveListing(user),
-                  child: const Text("Publish Listing"),
-                ),
+                _isLoading
+                    ? const CircularProgressIndicator()
+                    : ElevatedButton(
+                        onPressed: () {
+                          if (!_isLoading) {
+                            _saveListing(user);
+                          }
+                        },
+                        child: const Text("Publish Listing"),
+                      ),
               ],
             ),
           ),
