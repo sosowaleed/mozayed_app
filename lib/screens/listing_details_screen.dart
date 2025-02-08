@@ -4,17 +4,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mozayed_app/models/listing_model.dart';
 import 'package:mozayed_app/models/user_model.dart';
 import 'package:mozayed_app/providers/cart_provider.dart';
+import 'package:mozayed_app/providers/listing_provider.dart';
 import 'package:mozayed_app/providers/user_and_auth_provider.dart';
 
-class ListingDetailsScreen extends StatefulWidget {
+class ListingDetailsScreen extends ConsumerStatefulWidget {
   final ListingItem listingItem;
   const ListingDetailsScreen({super.key, required this.listingItem});
 
   @override
-  State<ListingDetailsScreen> createState() => _ListingDetailsScreenState();
+  ConsumerState<ListingDetailsScreen> createState() => _ListingDetailsScreenState();
 }
 
-class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
+class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
   int _currentImageIndex = 0;
   final TextEditingController _bidController = TextEditingController();
 
@@ -46,7 +47,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     );
   }
 
-  void _handleBid() async {
+  void _handleBid(UserModel user) async {
     double? enteredBid = double.tryParse(_bidController.text);
     double currentBid = widget.listingItem.currentHighestBid ??
         widget.listingItem.startingBid ??
@@ -62,6 +63,12 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
         SnackBar(
           content: Text("Your bid must be higher than \$${currentBid.toStringAsFixed(2)}"),
         ),
+      );
+      return;
+    }
+    if (DateTime.now().isAfter(widget.listingItem.bidEndTime!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Bid time has expired.")),
       );
       return;
     }
@@ -87,21 +94,38 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
 
     if (confirmed == true) {
       // Show a progress indicator for 3 seconds.
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => const Center(child: CircularProgressIndicator()),
-      );
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => const Center(child: CircularProgressIndicator()),
+        );
+      }
       await Future.delayed(const Duration(seconds: 3));
-      Navigator.of(context).pop(); // Remove the progress dialog
-      //TODO: update backed with new bid
-      // For example, update the "bids" collection with this new bid.
-      // For demonstration, we show a snackbar:
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Bid of \$${enteredBid.toStringAsFixed(2)} placed!")),
-      );
-      // Clear the bid input.
-      _bidController.clear();
+      if (mounted) {
+        Navigator.of(context).pop(); // Remove the progress dialog
+        // Update the listing with the new bid.
+        widget.listingItem.setCurrentHighestBid(enteredBid);
+        widget.listingItem.setCurrentHighestBidderId(user.id);
+        widget.listingItem.setBidHistory(
+            {
+              'bidderId': user.id,
+              'bidAmount': enteredBid,
+              'bidTime': DateTime.now().toIso8601String(),
+            });
+      }
+      await ref.read(listingsProvider.notifier).updateListing(widget.listingItem);
+      if (mounted){
+        // Show a success snackbar.
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text("Bid of \$${enteredBid.toStringAsFixed(2)} placed!")),
+        );
+        // Clear the bid input.
+        _bidController.clear();
+        Navigator.of(context).pop();
+      }
     }
   }
 
@@ -114,8 +138,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final listing = widget.listingItem;
-    return Consumer(builder: (context, ref, child) {
-      final user = UserModel.fromMap(ref.read(userDataProvider).value!);
+    final user = UserModel.fromMap(ref.read(userDataProvider).value!);
       return Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
@@ -243,7 +266,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () => _handleBid(),
+                    onPressed: () => _handleBid(user),
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 0),
                       fixedSize: Size(
@@ -276,6 +299,5 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
           ],
         ),
       );
-    });
   }
 }

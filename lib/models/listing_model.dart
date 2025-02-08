@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:mozayed_app/models/selling_location_model.dart';
 import 'package:uuid/uuid.dart';
 
@@ -12,18 +14,18 @@ class ListingItem {
   final String title;
   final String description;
   final List<String> image;
-  final double price; // For bid, this might be the starting price.
+  double price; // For bid, this might be the starting price.
   final String condition;
   final ListingLocation? location;
-  final int quantity;
+  int quantity;
   final SaleType saleType; // Determines whether bidding is enabled
   final String category;
   // --- Bidding fields (only used if saleType is bid) ---
   final DateTime? bidEndTime;
   final double? startingBid; // initial bid amount
-  final double? currentHighestBid;
-  final String? currentHighestBidderId;
-  final List<Map<String, dynamic>>? bidHistory; // each entry: {bidderId, bidAmount, bidTime}
+  double? currentHighestBid;
+  String? currentHighestBidderId;
+  List<Map<String, dynamic>>? bidHistory; // each entry: {bidderId, bidAmount, bidTime}
   final bool bidFinalized;
 
 
@@ -47,6 +49,43 @@ class ListingItem {
     this.bidHistory,
     this.bidFinalized = false,
   }) : id = id ?? uuid.v4();
+
+  void setCurrentHighestBid(double newBid) {
+    if (saleType == SaleType.bid) {
+      currentHighestBid = newBid;
+      setPrice(newBid);
+    } else {
+      log(
+          'you cannot set the currentHighestBid since the sale type is not bid');
+    }
+  }
+
+  void setPrice(double newPrice) {
+    price = newPrice;
+  }
+
+  void setQuantity(int newQuantity) {
+    quantity = newQuantity;
+  }
+
+  void setCurrentHighestBidderId(String? newCurrentHighestBidderId) {
+    if (saleType == SaleType.bid) {
+      currentHighestBidderId = newCurrentHighestBidderId;
+    } else {
+      log(
+          'you cannot set the currentHighestBidderId since the sale type is not bid');
+    }
+  }
+
+  void setBidHistory(Map<String, dynamic> newBidHistory) {
+    if (saleType == SaleType.bid) {
+      bidHistory == null ? bidHistory = [newBidHistory] : bidHistory!.add(newBidHistory);
+    } else {
+      log(
+          'you cannot set the bidHistory since the sale type is not bid');
+    }
+  }
+
 
   Map<String, dynamic> toMap() {
     return {

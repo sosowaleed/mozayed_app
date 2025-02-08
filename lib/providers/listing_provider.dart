@@ -56,6 +56,7 @@ class ListingsNotifier extends StateNotifier<AsyncValue<List<ListingItem>>> {
           .collection('listings')
           .doc(updatedListing.id)
           .update(updatedListing.toMap());
+      // If the listing is bid-enabled, update its bid data.
       if (updatedListing.saleType == SaleType.bid) {
         await FirebaseFirestore.instance
             .collection('bids')
