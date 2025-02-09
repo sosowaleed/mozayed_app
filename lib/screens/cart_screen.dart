@@ -1,8 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mozayed_app/models/cart_model.dart';
-import 'package:mozayed_app/models/listing_model.dart';
 import 'package:mozayed_app/providers/cart_provider.dart';
 import 'package:mozayed_app/providers/user_and_auth_provider.dart';
 import 'package:mozayed_app/widgets/listing_widget.dart';
@@ -70,17 +68,47 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       if (mounted) {
         Navigator.of(context).pop(); // Dismiss progress indicator.
       }
+      //TODO: Remove comments in final project; removes items if they reach 0 from backend and frontend.
+      /*// Get current cart items from the cart provider.
+      final cartItems = ref.read(cartProvider);
+
+      // Process each cart item: update listing quantity or remove listing if quantity reaches 0.
+      for (final cartItem in cartItems) {
+        final listingId = cartItem.listing.id;
+        final currentQty = cartItem.listing.quantity;
+        final purchasedQty = cartItem.quantity;
+        final newQty = currentQty - purchasedQty;
+
+        if (newQty > 0) {
+          // Update the listing document with the new quantity.
+          await FirebaseFirestore.instance
+              .collection("listings")
+              .doc(listingId)
+              .update({"quantity": newQty});
+        } else {
+          // Remove the listing if quantity is 0 (or less).
+          await FirebaseFirestore.instance
+              .collection("listings")
+              .doc(listingId)
+              .delete();
+        }
+      }*/
+
 
       final orderData = {
         'userId': ref.read(userDataProvider).value!['id'],
         'orderTime': DateTime.now().toIso8601String(),
-        'items':
-            ref.read(cartProvider).map((cartItem) => cartItem.toMap()).toList(),
+        'items': ref.read(cartProvider).map((cartItem) => {
+              'listingId': cartItem.listing.id,
+              'quantity': cartItem.quantity,
+              'price': cartItem.listing.price,
+              'title': cartItem.listing.title,
+        }).toList(),
         'shippingAddress': _addressController.text,
       };
       await FirebaseFirestore.instance
           .collection("orders")
-          .doc(ref.read(userDataProvider).value!['id'])
+          .doc()
           .set(orderData);
 
       // Clear the cart.
@@ -98,10 +126,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[300],
-      appBar: AppBar(
-        title: const Text("Your Cart"),
-      ),
+      backgroundColor: Colors.white,
       body: Consumer(builder: (context, ref, child) {
         final cartItems = ref.watch(cartProvider);
         return LayoutBuilder(builder: (context, constraints) {

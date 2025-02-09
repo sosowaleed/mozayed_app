@@ -196,12 +196,12 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
 
     // Delete removed images from Firebase Storage and remove them from Firestore reference.
     for (String imageUrl in _removedImageUrls) {
-      await _deleteImageFromFirebaseStorageAndFirestore(imageUrl, widget.listing.id);
+      await _deleteImageFromFirebaseStorageAndFirestore(
+          imageUrl, widget.listing.id);
     }
 
     // Merge remaining existing images with new ones.
-    List<String> updatedImages =
-    List<String>.from(_listingData["image"] ?? []);
+    List<String> updatedImages = List<String>.from(_listingData["image"] ?? []);
     updatedImages.addAll(newImageUrls);
     updatedImages = updatedImages.toSet().toList(); // Remove duplicates
     _listingData["image"] = updatedImages;
@@ -226,8 +226,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
         startingBid = widget.listing.startingBid;
       }
       // Preserve current highest bid if it exists; otherwise, initialize it.
-      currentHighestBid =
-          widget.listing.currentHighestBid ?? startingBid;
+      currentHighestBid = widget.listing.currentHighestBid ?? startingBid;
     }
 
     // Create the updated listing by merging new values with existing ones.
@@ -264,7 +263,6 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       Navigator.of(context).pop();
     }
   }
-
 
   void _previousImage() {
     if (_pageController.page! > 0) {
@@ -429,6 +427,9 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                     _listingData["description"] = value;
                   },
                 ),
+                //added this part to clear the price when the sale type is not buyNow
+                if (_saleType == SaleType.bid) const Text(""),
+
                 if (_saleType != SaleType.bid)
                   TextFormField(
                     initialValue: _listingData["price"],
@@ -485,9 +486,22 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                         );
                       }).toList(),
                       onChanged: (value) {
-                        setState(() {
-                          _saleType = value ?? SaleType.buyNow;
-                        });
+                        if (_saleType == SaleType.buyNow &&
+                            value == SaleType.bid) {
+                          // only allow changing from buyNow to bid.
+                          setState(() {
+                            _saleType = value ?? SaleType.buyNow;
+                          });
+                        } else if (_saleType == SaleType.bid &&
+                            value == SaleType.buyNow) {
+                          //show a message that you cant change from bid to buyNow
+                          ScaffoldMessenger.of(context).clearSnackBars();
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(const SnackBar(
+                            content: Text('You cannot change from bid to buy only from buy to bid.'),
+                            duration: Duration(seconds: 3),
+                          ));
+                        }
                       },
                     ),
                   ],
@@ -524,7 +538,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                   if (_listingData["startingBid"] == null)
                     TextFormField(
                       decoration:
-                      const InputDecoration(labelText: "Starting Bid"),
+                          const InputDecoration(labelText: "Starting Bid"),
                       keyboardType: TextInputType.number,
                       validator: (value) {
                         if (value == null || double.tryParse(value) == null) {

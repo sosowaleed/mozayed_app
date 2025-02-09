@@ -6,6 +6,7 @@ import 'package:mozayed_app/providers/user_and_auth_provider.dart';
 import 'package:mozayed_app/screens/cart_screen.dart';
 import 'package:mozayed_app/screens/profile_screen.dart';
 import 'package:mozayed_app/screens/sell_screen.dart';
+import 'package:mozayed_app/screens/user_history_screen.dart';
 import 'package:mozayed_app/screens/user_listing_screen.dart';
 import 'package:mozayed_app/providers/cart_provider.dart';
 
@@ -67,9 +68,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     {
       'title': const Text('History'),
       'icon': Icons.history,
-      'onTap': () {
+      'onTap': (context) {
         // Navigate to History Screen
-        debugPrint('History tapped');
+        Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const UserHistoryScreen()));
       },
     },
     {
@@ -162,17 +165,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             leading: Icon(item['icon']),
                             title: Text(item['title']),
                             trailing: item['title'] == 'Cart'
-                                ? carData.isNotEmpty ? Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${carData.length}',
-                                style: const TextStyle(color: Colors.white, fontSize: 12),
-                              ),
-                            ) : null
+                                ? carData.isNotEmpty
+                                    ? Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          '${carData.length}',
+                                          style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12),
+                                        ),
+                                      )
+                                    : null
                                 : null,
                             selected: index == _selectedIndex,
                             style: ListTileStyle.drawer,

@@ -71,7 +71,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   }
 
   // Upload an image file to Firebase Storage and return its download URL.
-  Future<String> uploadImage(File imageFile, String listingId, int index) async {
+  Future<String> uploadImage(
+      File imageFile, String listingId, int index) async {
     final storageRef = FirebaseStorage.instance
         .ref()
         .child("listing_images")
@@ -87,7 +88,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   /// Opens the image picker and lets the user choose an image.
   Future<void> _pickImage(ImageSource source) async {
     final pickedFile =
-    await _picker.pickImage(source: source, imageQuality: 80);
+        await _picker.pickImage(source: source, imageQuality: 80);
     if (pickedFile != null) {
       setState(() {
         _pickedImages.add(pickedFile);
@@ -97,8 +98,9 @@ class _SellScreenState extends ConsumerState<SellScreen> {
 
   /// Opens the map picker (existing implementation) to select a location.
   Future<void> _loadMapPicker() async {
-    List<double>? pickedLocation = await Navigator.of(context).push<List<double>>(
-        MaterialPageRoute(builder: (ctx) => const StaticMapPickerScreen()));
+    List<double>? pickedLocation = await Navigator.of(context)
+        .push<List<double>>(
+            MaterialPageRoute(builder: (ctx) => const StaticMapPickerScreen()));
     setState(() {
       _isGettingLocation = true;
     });
@@ -124,7 +126,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
         _isGettingLocation = false;
       });
     } else {
-      String address = await _getAddressFromLatLng(pickedLocation![0], pickedLocation[1]);
+      String address =
+          await _getAddressFromLatLng(pickedLocation![0], pickedLocation[1]);
       setState(() {
         _address = address;
         _isGettingLocation = false;
@@ -174,6 +177,17 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     if (_saleType == SaleType.bid) {
       if (_listingData["bidEndTime"] != null) {
         bidEndTime = DateTime.parse(_listingData["bidEndTime"]);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Please select a bid end time")),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
       }
       if (_listingData["startingBid"] != null) {
         _listingData["price"] = _listingData["startingBid"];
@@ -210,11 +224,10 @@ class _SellScreenState extends ConsumerState<SellScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Published Successfully")),
       );
-
     }
     setState(() {
       _isLoading = false;
-      });
+    });
   }
 
   Future _getAddressFromLatLngWeb({
@@ -228,9 +241,11 @@ class _SellScreenState extends ConsumerState<SellScreen> {
       "format": "json",
     });
     try {
-      final response = await http.get(uri, headers: {'Accept-Language': lang.toLanguageTag()});
+      final response = await http
+          .get(uri, headers: {'Accept-Language': lang.toLanguageTag()});
       if (response.statusCode != 200) {
-        throw http.ClientException('Error ${response.statusCode}: ${response.body}', uri);
+        throw http.ClientException(
+            'Error ${response.statusCode}: ${response.body}', uri);
       }
       final jsonResponse = jsonDecode(response.body);
       if (jsonResponse.containsKey('error')) {
@@ -245,13 +260,14 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   Future _getAddressFromLatLng(double latitude, double longitude) async {
     try {
       final List<geo.Placemark> placeMarks =
-      await geo.placemarkFromCoordinates(latitude, longitude);
+          await geo.placemarkFromCoordinates(latitude, longitude);
       if (placeMarks.isNotEmpty) {
         final geo.Placemark place = placeMarks.first;
         _listingData["location"] = {
           "lat": latitude,
           "lng": longitude,
-          "address": '${place.street}, ${place.locality}, ${place.administrativeArea}, ${place.country}',
+          "address":
+              '${place.street}, ${place.locality}, ${place.administrativeArea}, ${place.country}',
           "city": place.locality,
           "zip": place.postalCode,
           "country": place.country,
@@ -276,9 +292,14 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     UserModel user = UserModel.fromMap(ref.read(userDataProvider).value!);
 
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: widget.showBackButton, // This will show the back button
-      ),
+      backgroundColor: Colors.white,
+      appBar: widget.showBackButton
+          ? AppBar(
+              automaticallyImplyLeading:
+                  widget.showBackButton, // This will show the back button
+              title: const Text("Sell"),
+            )
+          : null,
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -313,8 +334,10 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                   right: 0,
                                   left: 0,
                                   child: IconButton(
-                                    icon: const Icon(Icons.close, color: Colors.red),
-                                    onPressed: () => _removeImage(xFile: _pickedImages[index]),
+                                    icon: const Icon(Icons.close,
+                                        color: Colors.red),
+                                    onPressed: () => _removeImage(
+                                        xFile: _pickedImages[index]),
                                   ),
                                 ),
                               ],
@@ -329,25 +352,30 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                             bottom: 0,
                             child: IconButton(
                               padding: const EdgeInsets.all(32),
-                              icon: const Icon(Icons.arrow_back_ios, size: 15, color: Colors.grey),
+                              icon: const Icon(Icons.arrow_back_ios,
+                                  size: 15, color: Colors.grey),
                               onPressed: () {
                                 _pageController.previousPage(
-                                    duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut);
                               },
                             ),
                           ),
                         // Right Arrow (only if more than one image and not on the last page)
-                        if (_pickedImages.length > 1 && _currentImageIndex < _pickedImages.length - 1)
+                        if (_pickedImages.length > 1 &&
+                            _currentImageIndex < _pickedImages.length - 1)
                           Positioned(
                             right: 0,
                             top: 0,
                             bottom: 0,
                             child: IconButton(
                               padding: const EdgeInsets.all(32),
-                              icon: const Icon(Icons.arrow_forward_ios, size: 15, color: Colors.grey),
+                              icon: const Icon(Icons.arrow_forward_ios,
+                                  size: 15, color: Colors.grey),
                               onPressed: () {
                                 _pageController.nextPage(
-                                    duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut);
                               },
                             ),
                           ),
@@ -359,7 +387,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                           child: Center(
                             child: Text(
                               '${_currentImageIndex + 1} / ${_pickedImages.length}',
-                              style: const TextStyle(color: Colors.white, fontSize: 18),
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 18),
                             ),
                           ),
                         )
@@ -367,7 +396,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                     ),
                   )
                 else
-                // If no images have been picked, show a placeholder.
+                  // If no images have been picked, show a placeholder.
                   Container(
                     height: 250,
                     color: Colors.grey[300],
@@ -411,6 +440,9 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                     _listingData["description"] = value;
                   },
                 ),
+                //added this part to clear the price when the sale type is not buyNow
+                if (_saleType == SaleType.bid)
+                  const Text(""),
                 if (_saleType != SaleType.bid)
                   TextFormField(
                     decoration: const InputDecoration(labelText: "Price"),
@@ -442,7 +474,9 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                     _listingData["quantity"] = value;
                   },
                 ),
-                const SizedBox(height: 5,),
+                const SizedBox(
+                  height: 5,
+                ),
                 DropdownButtonFormField<String>(
                   decoration: const InputDecoration(labelText: "Condition"),
                   value: _selectedCondition,
@@ -471,7 +505,9 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                       items: SaleType.values.map((saleType) {
                         return DropdownMenuItem<SaleType>(
                           value: saleType,
-                          child: Text(saleType == SaleType.buyNow ? "Buy Now" : "Bidding"),
+                          child: Text(saleType == SaleType.buyNow
+                              ? "Buy Now"
+                              : "Bidding"),
                         );
                       }).toList(),
                       onChanged: (value) {
@@ -489,7 +525,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                     onPressed: () async {
                       DateTime? picked = await showDatePicker(
                         context: context,
-                        initialDate: DateTime.now().add(const Duration(days: 1)),
+                        initialDate:
+                            DateTime.now().add(const Duration(days: 1)),
                         firstDate: DateTime.now(),
                         lastDate: DateTime.now().add(const Duration(days: 30)),
                       );
@@ -508,7 +545,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                   ),
                   // Starting Bid Field
                   TextFormField(
-                    decoration: const InputDecoration(labelText: "Starting Bid"),
+                    decoration:
+                        const InputDecoration(labelText: "Starting Bid"),
                     keyboardType: TextInputType.number,
                     validator: (value) {
                       if (value == null || double.tryParse(value) == null) {

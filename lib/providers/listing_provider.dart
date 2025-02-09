@@ -34,6 +34,7 @@ class ListingsNotifier extends StateNotifier<AsyncValue<List<ListingItem>>> {
             .set({
           'listingId': listing.id,
           'ownerId': listing.ownerId,
+          'startingBid': listing.startingBid,
           'bidEndTime': listing.bidEndTime?.toIso8601String(),
           'currentHighestBid': listing.startingBid ?? listing.price,
           'currentHighestBidderId': null,

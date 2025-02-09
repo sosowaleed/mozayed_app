@@ -6,6 +6,7 @@ import 'package:mozayed_app/models/user_model.dart';
 import 'package:mozayed_app/providers/cart_provider.dart';
 import 'package:mozayed_app/providers/listing_provider.dart';
 import 'package:mozayed_app/providers/user_and_auth_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ListingDetailsScreen extends ConsumerStatefulWidget {
   final ListingItem listingItem;
@@ -122,7 +123,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
           SnackBar(
               content:
                   Text("Bid of \$${enteredBid.toStringAsFixed(2)} placed!"),
-            duration: const Duration(seconds: 2),),
+            duration: const Duration(seconds: 1),),
         );
         // Clear the bid input.
         _bidController.clear();

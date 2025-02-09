@@ -34,12 +34,13 @@ class MyListingsScreen extends ConsumerWidget {
                     : const Icon(Icons.image),
                 title: Text(listing.title),
                 subtitle: Text("\$${listing.price.toStringAsFixed(2)}"),
+                trailing: Text("Sale Type: ${listing.saleType.name}"),
                 onTap: () {
                   // Navigate to the EditListingScreen with this listing's data.
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const SellScreen(showBackButton: true),
+                      builder: (context) => EditListingScreen(listing: listing,),
                     ),
                   );
                 },
