@@ -26,6 +26,7 @@ class _StaticMapPickerScreenState extends State<StaticMapPickerScreen> {
     } else {
       _pickedLocation = const LatLng(37.422, -122.084);
     }
+    //TODO: Remove comment in final demo release
     //_fetchInitialLocation();
   }
 
@@ -58,7 +59,8 @@ class _StaticMapPickerScreenState extends State<StaticMapPickerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pick a Location'),
+        title: Text('Pick a Location',  style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),),
+        backgroundColor: Theme.of(context).colorScheme.primary,
         actions: [
           IconButton(
             onPressed: () {
@@ -70,8 +72,10 @@ class _StaticMapPickerScreenState extends State<StaticMapPickerScreen> {
                 ]);
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please select a location on the map.'),
+                  SnackBar(
+                    content: const Text('Please select a location on the map.'),
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                    behavior: SnackBarBehavior.floating,
                   ),
                 );
               }
@@ -81,7 +85,10 @@ class _StaticMapPickerScreenState extends State<StaticMapPickerScreen> {
         ],
       ),
       body: _pickedLocation == null
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary,
+              ))
           : FlutterMap(
         options: MapOptions(
           initialCenter: _pickedLocation!,
@@ -107,11 +114,12 @@ class _StaticMapPickerScreenState extends State<StaticMapPickerScreen> {
                 Marker(
                   point: _pickedLocation!,
                   child: Transform.translate(
-                    offset: const Offset(-10, -30),
+
+                    offset: const Offset(-20, -40),
                     child: const Icon(
                       Icons.location_pin,
                       color: Colors.red,
-                      size: 50,
+                      size: 60,
                     ),
                   ),
                 ),

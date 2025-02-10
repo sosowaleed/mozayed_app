@@ -28,27 +28,40 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text("Checkout"),
+          title: Text(
+            "Checkout",
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("Enter Delivery address:"),
+              Text(
+                "Enter Delivery address:",
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
               TextField(
                 controller: _addressController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: "Delivery Address",
+                  labelStyle: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
             ],
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text("Cancel"),
+              onPressed: () {
+                Navigator.of(ctx).pop(false);
+              },
+              child: Text(
+                "Cancel",
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
+              ),
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text("Confirm Purchase"),
+              child: Text("Confirm Purchase",
+                  style: TextStyle(color: Theme.of(context).colorScheme.primary)),
             ),
           ],
         );
@@ -94,16 +107,18 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         }
       }*/
 
-
       final orderData = {
         'userId': ref.read(userDataProvider).value!['id'],
         'orderTime': DateTime.now().toIso8601String(),
-        'items': ref.read(cartProvider).map((cartItem) => {
-              'listingId': cartItem.listing.id,
-              'quantity': cartItem.quantity,
-              'price': cartItem.listing.price,
-              'title': cartItem.listing.title,
-        }).toList(),
+        'items': ref
+            .read(cartProvider)
+            .map((cartItem) => {
+                  'listingId': cartItem.listing.id,
+                  'quantity': cartItem.quantity,
+                  'price': cartItem.listing.price,
+                  'title': cartItem.listing.title,
+                })
+            .toList(),
         'shippingAddress': _addressController.text,
       };
       await FirebaseFirestore.instance
@@ -126,7 +141,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Consumer(builder: (context, ref, child) {
         final cartItems = ref.watch(cartProvider);
         return LayoutBuilder(builder: (context, constraints) {
@@ -143,7 +158,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             children: [
               Expanded(
                 child: cartItems.isEmpty
-                    ? const Center(child: Text("No items added"))
+                    ? Center(
+                        child: Text(
+                        "No items added",
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ))
                     : GridView.builder(
                         key: UniqueKey(),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -163,7 +182,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                     listingItem: cartItem.listing,
                                   ),
                                 ),
-                                Text("Quantity: ${cartItem.quantity}"),
+                                Text(
+                                  "Quantity: ${cartItem.quantity}",
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
                                 Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceAround,
@@ -189,7 +211,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                               .updateQuantity(
                                                   cartItem.listing.id, newQty);
                                         } else {
-                                          ScaffoldMessenger.of(context).clearSnackBars();
+                                          ScaffoldMessenger.of(context)
+                                              .clearSnackBars();
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(
                                             const SnackBar(
@@ -223,22 +246,24 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               if (cartItems.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.all(8.0),
-                  color: Colors.white,
+                  color: Theme.of(context).scaffoldBackgroundColor,
                   child: ElevatedButton(
                     onPressed: () => _checkout(),
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 0),
-                      fixedSize: Size(
-                        MediaQuery.of(context).size.width,
-                        40,
-                      ),
+                      fixedSize: Size(MediaQuery.of(context).size.width, 50),
                       padding: const EdgeInsets.symmetric(vertical: 2),
-                      backgroundColor: Colors.purple[300],
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
+                          borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text("Checkout",
-                        style: TextStyle(fontSize: 18, color: Colors.white)),
+                    child: Text(
+                      "Checkout",
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
+                    ),
                   ),
                 ),
             ],

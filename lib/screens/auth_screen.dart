@@ -315,12 +315,14 @@ class _AuthScreenState extends State<AuthScreen> {
                 margin: const EdgeInsets.only(
                     top: 30, bottom: 20, left: 20, right: 20),
                 width: 200,
-                child: AutoSizeText(
-                  "Mozayed",
+                child:  AutoSizeText(
+                  'Mozayed',
                   style: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimary,
-                      fontSize: 40,
-                      fontWeight: FontWeight.bold),
+                    color: Theme.of(context).colorScheme.onSecondary,
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    shadows: [Shadow(color: Theme.of(context).colorScheme.surface, blurRadius: 2, offset: const Offset(1, 1))],
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -330,9 +332,12 @@ class _AuthScreenState extends State<AuthScreen> {
                 width: 200,
                 child: AutoSizeText(
                   "Location based marketplace.",
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimary,
-                    fontSize: 10,
+                  style:  TextStyle(
+                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    fontSize: 16,
+                    shadows: [
+                      Shadow(color: Theme.of(context).colorScheme.surface, offset: const Offset(1, 1)),
+                    ],
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -452,8 +457,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             child: Text(
                               _isLogin
                                   ? "Create new account"
-                                  : "I already have an account",
-                              style: const TextStyle(color: Colors.blue),
+                                  : "I already have an account", style: TextStyle(color: Theme.of(context).colorScheme.primary),
                             ),
                           ),
                         ],

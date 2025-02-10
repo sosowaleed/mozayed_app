@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:developer';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:http/http.dart' as http;
 import 'package:geocoding/geocoding.dart' as geo;
 import 'dart:convert';
@@ -283,9 +282,11 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Edit Listing"),
+        title: Text("Edit Listing",
+            style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
+        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -498,7 +499,8 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                           ScaffoldMessenger.of(context).clearSnackBars();
                           ScaffoldMessenger.of(context)
                               .showSnackBar(const SnackBar(
-                            content: Text('You cannot change from bid to buy only from buy to bid.'),
+                            content: Text(
+                                'You cannot change from bid to buy only from buy to bid.'),
                             duration: Duration(seconds: 3),
                           ));
                         }
@@ -592,7 +594,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                 // Location Picker
                 Column(
                   children: [
-                    TextButton.icon(
+                    ElevatedButton.icon(
                       icon: const Icon(Icons.map),
                       onPressed: _loadMapPicker,
                       label: const Text("Select Location"),

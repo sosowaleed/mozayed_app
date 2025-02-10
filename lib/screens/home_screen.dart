@@ -1,11 +1,14 @@
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mozayed_app/layouts/home_content_layout.dart';
 import 'package:mozayed_app/providers/user_and_auth_provider.dart';
 import 'package:mozayed_app/screens/cart_screen.dart';
 import 'package:mozayed_app/screens/profile_screen.dart';
 import 'package:mozayed_app/screens/sell_screen.dart';
+import 'package:mozayed_app/screens/settings_screen.dart';
 import 'package:mozayed_app/screens/user_history_screen.dart';
 import 'package:mozayed_app/screens/user_listing_screen.dart';
 import 'package:mozayed_app/providers/cart_provider.dart';
@@ -70,26 +73,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       'icon': Icons.history,
       'onTap': (context) {
         // Navigate to History Screen
-        Navigator.push(
-            context,
+        Navigator.push(context,
             MaterialPageRoute(builder: (context) => const UserHistoryScreen()));
       },
     },
     {
       'title': const Text('Settings'),
       'icon': Icons.settings,
-      'onTap': () {
+      'onTap': (context) {
         // Navigate to Settings Screen
-        debugPrint('Settings tapped');
+        Navigator.push(context,
+            MaterialPageRoute(builder: (context) => const SettingsScreen()));
       },
     },
     {
       'title': const Text(
         'Sign Out',
-        style: TextStyle(color: Colors.red),
+        style: TextStyle(
+          color: Color.fromARGB(255, 237, 72, 72),
+          fontWeight: FontWeight.bold,
+        ),
       ),
       'icon': Icons.logout,
-      'onTap': () async {
+      'onTap': (context) async {
         await FirebaseAuth.instance.signOut();
       },
     },
@@ -135,12 +141,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         final isPhone = constraints.maxWidth < 650;
 
         return Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           appBar: AppBar(
-            title: Text(
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            title: AutoSizeText(
               _mainMenuItems[_selectedIndex]['title'] == 'Home'
                   ? 'Mozayed'
                   : _mainMenuItems[_selectedIndex]['title'],
+              style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
             ),
             actions: [
               // Display the profile icon as a popup menu button
@@ -157,10 +165,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     // Always-open drawer-like widget
                     Container(
                       width: 200,
-                      color: Colors.grey[100],
+                      color: Theme.of(context).colorScheme.secondaryContainer,
                       child: ListView(
                         children: _mainMenuItems.map((item) {
                           final index = _mainMenuItems.indexOf(item);
+
                           return ListTile(
                             leading: Icon(item['icon']),
                             title: Text(item['title']),
@@ -169,14 +178,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     ? Container(
                                         padding: const EdgeInsets.all(4),
                                         decoration: BoxDecoration(
-                                          color: Colors.red,
+                                          color: const Color.fromARGB(
+                                              255, 237, 72, 72),
                                           borderRadius:
                                               BorderRadius.circular(12),
                                         ),
                                         child: Text(
                                           '${carData.length}',
                                           style: const TextStyle(
-                                              color: Colors.white,
+                                              color: Color.fromARGB(
+                                                  255,
+                                                  231,
+                                                  231,
+                                                  231),
                                               fontSize: 12),
                                         ),
                                       )
@@ -207,12 +221,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 Positioned(
                                   right: 0,
                                   child: CircleAvatar(
-                                    backgroundColor: Colors.red,
+                                    backgroundColor: const Color.fromARGB(
+                                        255, 237, 72, 72),
                                     radius: 8,
-                                    child: Text('${carData.length}',
-                                        style: const TextStyle(
-                                            fontSize: 10, color: Colors.white)),
+                                    child: Text(
+                                      '${carData.length}',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: Color.fromARGB(255, 231, 231, 231),
+                                      ),
                                   ),
+                                ),
                                 ),
                             ],
                           ),

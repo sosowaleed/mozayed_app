@@ -15,8 +15,9 @@ class MyListingsScreen extends ConsumerWidget {
     final currentUserId = ref.watch(userDataProvider).value?['id'];
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text("My Listings")),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(title: Text("My Listings", style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),),
+    backgroundColor: Theme.of(context).colorScheme.primary,),
       body: listingsAsync.when(
         data: (listings) {
           final myListings =
@@ -29,6 +30,7 @@ class MyListingsScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final listing = myListings[index];
               return ListTile(
+                shape: const Border(bottom: BorderSide(color: Colors.grey)),
                 leading: listing.image.isNotEmpty
                     ? Image.network(listing.image.first, width: 50, height: 50, fit: BoxFit.cover)
                     : const Icon(Icons.image),

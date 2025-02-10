@@ -6,7 +6,6 @@ import 'package:mozayed_app/models/user_model.dart';
 import 'package:mozayed_app/providers/cart_provider.dart';
 import 'package:mozayed_app/providers/listing_provider.dart';
 import 'package:mozayed_app/providers/user_and_auth_provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ListingDetailsScreen extends ConsumerStatefulWidget {
   final ListingItem listingItem;
@@ -142,11 +141,13 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
   Widget build(BuildContext context) {
     final listing = widget.listingItem;
     final user = UserModel.fromMap(ref.read(userDataProvider).value!);
+    final theme = Theme.of(context);
+
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.surface,
         appBar: AppBar(
-          title: Text(listing.title, style: const TextStyle(fontSize: 18)),
-          leading: IconButton(
+          title: Text(listing.title, style: TextStyle(fontSize: 18, color: theme.appBarTheme.titleTextStyle?.color)),
+          leading:  IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.of(context).pop(),
           ),
@@ -173,9 +174,9 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back_ios, size: 30),
                       onPressed: _previousImage,
-                      color: Colors.white,
+                      color: theme.colorScheme.onPrimary,
                       style: ButtonStyle(
-                        backgroundColor: WidgetStateProperty.all(Colors.black38),
+                        backgroundColor: WidgetStateProperty.all(theme.colorScheme.secondary.withOpacity(0.5)),
                       ),
                     ),
                   ),
@@ -184,10 +185,9 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                     right: 10,
                     child: IconButton(
                       icon: const Icon(Icons.arrow_forward_ios, size: 30),
-                      onPressed: _nextImage,
-                      color: Colors.white,
+                      onPressed: _nextImage,                      color: theme.colorScheme.onPrimary,
                       style: ButtonStyle(
-                        backgroundColor: WidgetStateProperty.all(Colors.black38),
+                         backgroundColor: WidgetStateProperty.all(theme.colorScheme.secondary.withOpacity(0.5)),
                       ),
                     ),
                   ),
@@ -209,12 +209,12 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                     const SizedBox(height: 8),
                     Text(
                       "Price: \$${listing.price.toStringAsFixed(2)}",
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       "Quantity: ${listing.quantity}",
-                      style: const TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: 16, color: theme.textTheme.bodyLarge?.color, fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 8),
                     // Distance Indicator.
@@ -226,19 +226,19 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                         widget.listingItem.location!.lng,
                       ) /
                           1000).toStringAsFixed(1)} km",
-                      style: const TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: 16, color: theme.textTheme.bodyLarge?.color, fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 20),
-                    const Text(
+                     Text(
                       "Description:",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge!.color),
                     ),
                     const SizedBox(height: 5),
                     Expanded(
                       child: SingleChildScrollView(
                         child: Text(
                           listing.description,
-                          style: const TextStyle(fontSize: 14),
+                          style: TextStyle(fontSize: 14, color: theme.textTheme.bodyLarge!.color),
                         ),
                       ),
                     ),
@@ -248,12 +248,12 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
             ),
             const Spacer(),
             // Bid/Buy Button Area.
-            Container(
-              color: Colors.white,
+             Container(
+              color: theme.scaffoldBackgroundColor,
               padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
               child: listing.saleType == SaleType.bid
                   ? Column(
-                children: [
+                  children: [
                   Text(
                     "Current Highest Bid: \$${(listing.currentHighestBid ?? listing.startingBid ?? listing.price).toStringAsFixed(2)}",
                     style: const TextStyle(fontSize: 16),
@@ -277,7 +277,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                         40,
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 2),
-                      backgroundColor: Colors.blue,
+                      backgroundColor: theme.colorScheme.secondary,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     child: const Text("Bid", style: TextStyle(fontSize: 16)),
@@ -293,10 +293,10 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                     40,
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 2),
-                  backgroundColor: Colors.green,
+                  backgroundColor: theme.colorScheme.primary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                child: const Text("Buy", style: TextStyle(fontSize: 18, color: Colors.white)),
+                child:  Text("Buy", style: TextStyle(fontSize: 18, color: theme.colorScheme.onPrimary)),
               ),
             ),
           ],

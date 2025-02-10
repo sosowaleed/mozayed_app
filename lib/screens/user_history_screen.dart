@@ -24,9 +24,10 @@ class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
     final bidsAsync = ref.watch(bidsProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const AutoSizeText('User History'),
+        title: AutoSizeText('User History', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),),
+        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
       body: listingsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -80,6 +81,7 @@ class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
                         //get the data needed from the current purchase order.
                         final currentOrder = purchasedOrders.firstWhere((order) => order["listingId"] == listing.id);
                         return ListTile(
+                          shape: const Border(bottom: BorderSide(color: Colors.grey)),
                           leading: listing.image.isNotEmpty
                               ? Image.network(
                             listing.image.first,
@@ -134,6 +136,7 @@ class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
                       itemBuilder: (context, index) {
                         final listing = bidListings[index];
                         return ListTile(
+                          shape: const Border(bottom: BorderSide(color: Colors.grey)),
                           subtitle: bidsAsync.when(
                             loading: () => const Center(child: CircularProgressIndicator()),
                             error: (error, stack) =>

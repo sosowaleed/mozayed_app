@@ -20,6 +20,7 @@ class _ListingWidgetState extends State<ListingWidget> {
     super.initState();
     listingItem = widget.listingItem;
   }
+
   bool isPhone(BuildContext context) {
     final size = MediaQuery.of(context).size;
     return size.width < 600; // Adjust breakpoint as needed
@@ -49,7 +50,8 @@ class _ListingWidgetState extends State<ListingWidget> {
         // Navigate to the Listing Details Screen
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => ListingDetailsScreen(listingItem: listingItem),
+            builder: (context) =>
+                ListingDetailsScreen(listingItem: listingItem),
           ),
         );
       },
@@ -64,7 +66,8 @@ class _ListingWidgetState extends State<ListingWidget> {
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(10)),
                   child: Hero(
                     tag: listingItem.id,
                     child: Image.network(
@@ -85,8 +88,13 @@ class _ListingWidgetState extends State<ListingWidget> {
                       onPressed: _previousImage,
                       color: Colors.white,
                       iconSize: 24,
-                      style: const ButtonStyle(
-                        backgroundColor: WidgetStatePropertyAll(Colors.black38),
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.all(
+                          Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.38),
+                        ),
                       ),
                     ),
                   ),
@@ -100,8 +108,13 @@ class _ListingWidgetState extends State<ListingWidget> {
                       onPressed: _nextImage,
                       color: Colors.white,
                       iconSize: 24,
-                      style: const ButtonStyle(
-                        backgroundColor: WidgetStatePropertyAll(Colors.black38),
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.all(
+                          Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.38),
+                        ),
                       ),
                     ),
                   ),
@@ -125,7 +138,8 @@ class _ListingWidgetState extends State<ListingWidget> {
               right: 0,
               child: Container(
                 color: Colors.black54,
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -133,16 +147,16 @@ class _ListingWidgetState extends State<ListingWidget> {
                       listingItem.title,
                       softWrap: true,
                       style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                         color: Color.fromRGBO(237, 237, 237, 1),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-
-                    const SizedBox(height: 4,),
-
+                    const SizedBox(
+                      height: 4,
+                    ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       mainAxisSize: MainAxisSize.max,
@@ -152,7 +166,8 @@ class _ListingWidgetState extends State<ListingWidget> {
                           TextSpan(
                             children: [
                               TextSpan(
-                                text: '\$${listingItem.price.toStringAsFixed(2)}',
+                                text:
+                                    '\$${listingItem.price.toStringAsFixed(2)}',
                                 style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -172,7 +187,8 @@ class _ListingWidgetState extends State<ListingWidget> {
                         Expanded(
                           child: AutoSizeText(
                             listingItem.condition,
-                            style: TextStyle(color: Colors.grey[200], fontSize: 14),
+                            style: TextStyle(
+                                color: Colors.grey[200], fontSize: 14),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),

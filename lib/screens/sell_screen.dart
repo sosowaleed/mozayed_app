@@ -292,7 +292,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     UserModel user = UserModel.fromMap(ref.read(userDataProvider).value!);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: widget.showBackButton
           ? AppBar(
               automaticallyImplyLeading:
@@ -399,7 +399,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                   // If no images have been picked, show a placeholder.
                   Container(
                     height: 250,
-                    color: Colors.grey[300],
+                    color: Theme.of(context).colorScheme.tertiaryContainer,
                     child: const Center(child: Text("No images selected")),
                   ),
                 const SizedBox(height: 8),

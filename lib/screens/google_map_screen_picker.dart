@@ -25,18 +25,23 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-          title:
-          Text(widget.isSelecting ? 'Pick your Location' : 'Your Location'),
-          actions: [
-            if (widget.isSelecting)
-              IconButton(
-                icon: const Icon(Icons.save),
-                onPressed: () {
-                  Navigator.of(context).pop<LatLng>(_pickedLocation);
-                },
-              ),
-          ]),
+        title: Text(widget.isSelecting ? 'Pick your Location' : 'Your Location',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onPrimary,
+            )),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        actions: [
+          if (widget.isSelecting)
+            IconButton(
+              icon: Icon(Icons.save, color: Theme.of(context).colorScheme.onPrimary),
+              onPressed: () {
+                Navigator.of(context).pop<LatLng>(_pickedLocation);
+              },
+            ),
+        ],
+      ),
       body: GoogleMap(
         onTap: !widget.isSelecting
             ? null
@@ -52,17 +57,21 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
           ),
           zoom: 16,
         ),
-        markers: (_pickedLocation == null && widget.isSelecting)
-            ? {}
-            : {
+        markers: (_pickedLocation == null && widget.isSelecting) ? {} : {
           Marker(
-            markerId: const MarkerId('m1'),
-            position: _pickedLocation ??
-                LatLng(
-                  widget.latitude,
-                  widget.longitude,
-                ),
-          ),
+              markerId: const MarkerId('m1'),
+              position: _pickedLocation ??
+                  LatLng(
+                    widget.latitude,
+                    widget.longitude,
+                  ),
+              icon: BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueAzure),
+              infoWindow: const InfoWindow(
+                title: 'Selected Location',
+                snippet: 'This is the location you selected.',
+              )
+          )
         },
       ),
     );

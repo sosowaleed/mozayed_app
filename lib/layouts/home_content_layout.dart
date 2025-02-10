@@ -10,6 +10,7 @@ import 'package:mozayed_app/providers/listing_provider.dart';
 // An enum for the location scope.
 enum LocationScope { everywhere, city, country }
 
+
 class HomeContent extends ConsumerStatefulWidget {
   const HomeContent({super.key});
 
@@ -18,6 +19,7 @@ class HomeContent extends ConsumerStatefulWidget {
 }
 
 class _HomeContentState extends ConsumerState<HomeContent> {
+
   // Filter parameters with default values.
   String _selectedCondition = "Any";
   String _selectedSaleType = "Any";
@@ -148,14 +150,18 @@ class _HomeContentState extends ConsumerState<HomeContent> {
     return listingsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Center(child: Text("Error loading listings: $error")),
+
       data: (allListings) {
         // Initially, update the filtered listings.
         _filteredListings = List.from(allListings);
         return LayoutBuilder(
+
           builder: (context, constraints) {
             int crossAxisCount = 2;
             if (constraints.maxWidth >= 1200 && constraints.maxHeight >= 500) {
               crossAxisCount = 6;
+
+
             } else if (constraints.maxWidth >= 735 && constraints.maxHeight >= 400) {
               crossAxisCount = 5;
             } else if (constraints.maxWidth >= 600) {
@@ -170,6 +176,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                   child: Row(
                     children: [
                       TextButton.icon(
+                        style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,),
                         onPressed: () {
                           setState(() {
                             _showFilters = !_showFilters;
@@ -180,7 +187,9 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                           duration: const Duration(milliseconds: 300),
                           child: const Icon(Icons.arrow_drop_down),
                         ),
-                        label: const Text("Filters"),
+                        label: Text(
+                            "Filters",
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),),
                       ),
                     ],
                   ),
@@ -189,6 +198,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                 if (_showFilters)
                   Card(
                     margin: const EdgeInsets.all(8.0),
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     elevation: 3,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -199,7 +209,9 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                               // Condition Dropdown.
                               Expanded(
                                 child: DropdownButtonFormField<String>(
-                                  decoration: const InputDecoration(
+                                  decoration:  InputDecoration(
+                                    fillColor: Theme.of(context).colorScheme.onInverseSurface,
+                                    filled: true,
                                     labelText: "Condition",
                                   ),
                                   value: _selectedCondition,
@@ -220,7 +232,9 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                               // Sale Type Dropdown.
                               Expanded(
                                 child: DropdownButtonFormField<String>(
-                                  decoration: const InputDecoration(
+                                  decoration:  InputDecoration(
+                                    fillColor: Theme.of(context).colorScheme.onInverseSurface,
+                                    filled: true,
                                     labelText: "Sale Type",
                                   ),
                                   value: _selectedSaleType,
@@ -245,7 +259,9 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                               // Category Dropdown.
                               Expanded(
                                 child: DropdownButtonFormField<String>(
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
+                                    fillColor: Theme.of(context).colorScheme.onInverseSurface,
+                                    filled: true,
                                     labelText: "Category",
                                   ),
                                   value: _selectedCategory,
@@ -266,7 +282,9 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                               // Price Filter.
                               Expanded(
                                 child: TextFormField(
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
+                                    fillColor: Theme.of(context).colorScheme.onInverseSurface,
+                                    filled: true,
                                     labelText: "Max Price",
                                   ),
                                   keyboardType: TextInputType.number,
@@ -283,7 +301,9 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                               // Max Distance Filter (km).
                               Expanded(
                                 child: TextFormField(
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
+                                    fillColor: Theme.of(context).colorScheme.onInverseSurface,
+                                    filled: true,
                                     labelText: "Max Distance (km)",
                                   ),
                                   keyboardType: TextInputType.number,
@@ -298,13 +318,13 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const AutoSizeText("Location Scope:"),
+                                     AutoSizeText("Location Scope:", style: TextStyle(color: Theme.of(context).colorScheme.onSurface),),
                                     RadioListTile<LocationScope>(
-                                      title: const AutoSizeText("Everywhere"),
+                                      title:  AutoSizeText("Everywhere", style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                                       value: LocationScope.everywhere,
                                       groupValue: _selectedLocationScope,
                                       dense: true,
-                                      contentPadding: EdgeInsets.zero,
+                                       contentPadding: EdgeInsets.zero,
                                       onChanged: (value) {
                                         setState(() {
                                           _selectedLocationScope = value!;
@@ -312,14 +332,14 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                                       },
                                     ),
                                     RadioListTile<LocationScope>(
-                                      title: const AutoSizeText("City"),
+                                      title:  AutoSizeText("City",style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                                       value: LocationScope.city,
                                       groupValue: _selectedLocationScope,
                                       dense: true,
                                       contentPadding: EdgeInsets.zero,
                                       onChanged: (value) {
-                                        setState(() {
-                                          _selectedLocationScope = value!;
+                                        setState((){
+                                          _selectedLocationScope=value!;
                                         });
                                       },
                                     ),
@@ -340,7 +360,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                               ),
                               const SizedBox(width: 12),
                               ElevatedButton(
-                                onPressed: () => _applyFilter(allListings),
+                                  onPressed: () => _applyFilter(allListings),
                                 child: const Text("Filter"),
                               ),
                             ],

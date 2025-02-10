@@ -102,9 +102,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _address ??= user.location.address;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const AutoSizeText("Profile"),
+        title: AutoSizeText("Profile",
+            style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
+        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
       body: Center(
         child: Card(
@@ -256,7 +258,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           },
                         ),
                         Expanded(
-                          child: TextButton.icon(
+                          child: ElevatedButton.icon(
                             icon: const Icon(Icons.map),
                             onPressed: () {
                               _loadMapPicker(user);
