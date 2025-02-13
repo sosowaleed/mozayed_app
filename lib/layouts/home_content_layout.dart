@@ -34,6 +34,9 @@ class _HomeContentState extends ConsumerState<HomeContent> {
   // Whether the filter inputs are visible.
   bool _showFilters = false;
 
+  // Whether the filter has been applied.
+  bool _filterApplied = false;
+
   // Options for dropdowns.
   final List<String> _conditionOptions = [
     "Any",
@@ -61,8 +64,8 @@ class _HomeContentState extends ConsumerState<HomeContent> {
   ];
 
   // Default user location (fallback) if not available.
-  final double _defaultUserLat = 37.7749;
-  final double _defaultUserLng = -122.4194;
+  final double _defaultUserLat = 24.774265;
+  final double _defaultUserLng = 46.738586;
 
   /// Called when the user presses the Filter button.
   void _applyFilter(List<ListingItem> allListings) {
@@ -139,6 +142,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
       }).toList();
       // Update our filtered list.
       _filteredListings = filteredListings;
+      _filterApplied = true;
     });
   }
 
@@ -152,8 +156,10 @@ class _HomeContentState extends ConsumerState<HomeContent> {
       error: (error, stack) => Center(child: Text("Error loading listings: $error")),
 
       data: (allListings) {
-        // Initially, update the filtered listings.
-        _filteredListings = List.from(allListings);
+        // Only update _filteredListings with all listings if no filter is applied.
+        if (!_filterApplied) {
+          _filteredListings = List.from(allListings);
+        }
         return LayoutBuilder(
 
           builder: (context, constraints) {
@@ -358,11 +364,33 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              ElevatedButton(
-                                  onPressed: () => _applyFilter(allListings),
-                                child: const Text("Filter"),
-                              ),
+                              Column(
+                                children: [
+                                  const SizedBox(width: 12),
+                                  ElevatedButton(
+                                    onPressed: () => _applyFilter(allListings),
+                                    child: const Text("Filter"),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        // Reset filter parameters back to their defaults.
+                                        _selectedCondition = "Any";
+                                        _selectedSaleType = "Any";
+                                        _selectedCategory = "Any";
+                                        _maxPriceText = "";
+                                        _maxDistanceText = "";
+                                        _selectedLocationScope = LocationScope.everywhere;
+                                        _filterApplied = false;
+                                        // Reset filtered listings to the full list.
+                                        _filteredListings = List.from(allListings);
+                                      });
+                                    },
+                                    child: const Text("Reset"),
+                                  ),
+                                ],
+                              )
                             ],
                           ),
                         ],
