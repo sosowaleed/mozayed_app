@@ -45,3 +45,51 @@ app.*.map.json
 /firebase.json
 /.vscode/settings.json
 /devtools_options.yaml
+# OS Generated Files
+Thumbs.db
+
+# IDE and Editor files
+.vscode/
+
+# Flutter/Dart related
+build/
+pubspec.lock
+
+# Android
+android/.gradle/
+android/app/debug
+android/app/profile
+android/app/release
+android/local.properties
+android/key.properties
+**/*.keystore
+**/*.jks
+android/captures/
+GeneratedPluginRegistrant.java
+android/app/google-services.json
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/DerivedData/
+ios/Flutter/ephemeral/
+
+# macOS / Linux / Windows
+macos/Flutter/ephemeral/
+linux/flutter/ephemeral
+windows/flutter/ephemeral/
+
+# Firebase Functions (Node.js) and compiled outputs
+functions/node_modules/
+functions/lib/**/*.js
+functions/lib/**/*.js.map
+functions/typings/
+functions/*.local
+
+# Secret and environment configuration files
+.env
+*.env

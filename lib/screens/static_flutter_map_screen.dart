@@ -80,7 +80,7 @@ class _StaticMapPickerScreenState extends State<StaticMapPickerScreen> {
                 );
               }
             },
-            icon: const Icon(Icons.save),
+            icon: Icon(Icons.save, color: Theme.of(context).colorScheme.onPrimary,),
           )
         ],
       ),

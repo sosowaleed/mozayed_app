@@ -50,6 +50,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
     "Any",
     "Furniture",
     "Electronics",
+    "Car",
     "Clothing",
     "Home",
     "Books",

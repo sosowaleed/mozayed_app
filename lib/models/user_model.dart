@@ -4,6 +4,7 @@ class UserModel {
   final String id;
   final String name;
   final String email;
+  final bool admin;
   final UserLocation location;
 
   UserModel({
@@ -11,6 +12,7 @@ class UserModel {
     required this.name,
     required this.email,
     required this.location,
+    this.admin = false, // default to false
   });
 
   Map<String, dynamic> toMap() {
@@ -18,6 +20,7 @@ class UserModel {
       'id': id,
       'name': name,
       'email': email,
+      'admin': admin,
       'location': location.toMap(),
     };
   }
@@ -27,6 +30,7 @@ class UserModel {
       id: map['id'],
       name: map['name'],
       email: map['email'],
+      admin: map['admin'] ?? false,
       location: UserLocation.fromMap(map['location']),
     );
   }

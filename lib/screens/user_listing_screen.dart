@@ -35,7 +35,7 @@ class MyListingsScreen extends ConsumerWidget {
                     ? Image.network(listing.image.first, width: 50, height: 50, fit: BoxFit.cover)
                     : const Icon(Icons.image),
                 title: Text(listing.title),
-                subtitle: Text("\$${listing.price.toStringAsFixed(2)}"),
+                subtitle: Text("SAR ${listing.price.toStringAsFixed(2)}"),
                 trailing: Text("Sale Type: ${listing.saleType.name}"),
                 onTap: () {
                   // Navigate to the EditListingScreen with this listing's data.

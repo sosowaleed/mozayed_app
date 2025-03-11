@@ -81,8 +81,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       if (mounted) {
         Navigator.of(context).pop(); // Dismiss progress indicator.
       }
-      //TODO: Remove comments in final project; removes items if they reach 0 from backend and frontend.
-      /*// Get current cart items from the cart provider.
+
+      // Get current cart items from the cart provider.
       final cartItems = ref.read(cartProvider);
 
       // Process each cart item: update listing quantity or remove listing if quantity reaches 0.
@@ -105,7 +105,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               .doc(listingId)
               .delete();
         }
-      }*/
+      }
 
       final orderData = {
         'userId': ref.read(userDataProvider).value!['id'],

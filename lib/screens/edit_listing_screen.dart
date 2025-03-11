@@ -25,6 +25,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
   final List<String> _categoryOptions = [
     "Furniture",
     "Electronics",
+    "Car",
     "Clothing",
     "Home",
     "Books",
@@ -406,6 +407,43 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    const Text("Sale Type: "),
+                    DropdownButton<SaleType>(
+                      value: _saleType,
+                      items: SaleType.values.map((saleType) {
+                        return DropdownMenuItem<SaleType>(
+                          value: saleType,
+                          child: Text(saleType == SaleType.buyNow
+                              ? "Buy Now"
+                              : "Bidding"),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (_saleType == SaleType.buyNow &&
+                            value == SaleType.bid) {
+                          // only allow changing from buyNow to bid.
+                          setState(() {
+                            _saleType = value ?? SaleType.buyNow;
+                          });
+                        } else if (_saleType == SaleType.bid &&
+                            value == SaleType.buyNow) {
+                          //show a message that you cant change from bid to buyNow
+                          ScaffoldMessenger.of(context).clearSnackBars();
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(const SnackBar(
+                            content: Text(
+                                'You cannot change from bid to buy only from buy to bid.'),
+                            duration: Duration(seconds: 3),
+                          ));
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 // Form fields (title, description, etc.)
                 TextFormField(
                   initialValue: _listingData["title"],
@@ -473,42 +511,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                 ),
                 const SizedBox(height: 12),
                 // Sale Type Toggle
-                Row(
-                  children: [
-                    const Text("Sale Type: "),
-                    DropdownButton<SaleType>(
-                      value: _saleType,
-                      items: SaleType.values.map((saleType) {
-                        return DropdownMenuItem<SaleType>(
-                          value: saleType,
-                          child: Text(saleType == SaleType.buyNow
-                              ? "Buy Now"
-                              : "Bidding"),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        if (_saleType == SaleType.buyNow &&
-                            value == SaleType.bid) {
-                          // only allow changing from buyNow to bid.
-                          setState(() {
-                            _saleType = value ?? SaleType.buyNow;
-                          });
-                        } else if (_saleType == SaleType.bid &&
-                            value == SaleType.buyNow) {
-                          //show a message that you cant change from bid to buyNow
-                          ScaffoldMessenger.of(context).clearSnackBars();
-                          ScaffoldMessenger.of(context)
-                              .showSnackBar(const SnackBar(
-                            content: Text(
-                                'You cannot change from bid to buy only from buy to bid.'),
-                            duration: Duration(seconds: 3),
-                          ));
-                        }
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
+
 
                 if (_saleType == SaleType.bid) ...[
                   // Bid End Time Picker
@@ -557,7 +560,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                   if (_listingData["currentHighestBid"] != null)
                     const SizedBox(height: 12),
                   Text(
-                    "Current Highest Bid: \$${_listingData["currentHighestBid"]}",
+                    "Current Highest Bid: SAR ${_listingData["currentHighestBid"]}",
                     style: const TextStyle(fontSize: 16),
                   ),
                 ],

@@ -167,7 +167,7 @@ class _ListingWidgetState extends State<ListingWidget> {
                             children: [
                               TextSpan(
                                 text:
-                                    '\$${listingItem.price.toStringAsFixed(2)}',
+                                    listingItem.price.toStringAsFixed(2),
                                 style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,

@@ -44,15 +44,19 @@ class _AuthScreenState extends State<AuthScreen> {
 
     try {
       if (_isLogin) {
+        // Sign in with email and password
         final userCredential = await _firebaseAuth.signInWithEmailAndPassword(
           email: _userModel['email'],
           password: _password,
         );
       } else {
+        // Create a new user with email and password
         final userCredential = await _firebaseAuth
             .createUserWithEmailAndPassword(email: _userModel['email'], password: _password);
 
+        // Add user data to Firestore
         _userModel["id"] = userCredential.user!.uid;
+        _userModel["admin"] = false; // default to false, enabled by backend later
         await FirebaseFirestore.instance
             .collection("users")
             .doc(userCredential.user!.uid)

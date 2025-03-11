@@ -32,6 +32,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   final List<String> _categoryOptions = [
     "Furniture",
     "Electronics",
+    "Car",
     "Clothing",
     "Home",
     "Books",
@@ -420,6 +421,29 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
+                // Sale Type Toggle
+                Row(
+                  children: [
+                    const Text("Sale Type: "),
+                    DropdownButton<SaleType>(
+                      value: _saleType,
+                      items: SaleType.values.map((saleType) {
+                        return DropdownMenuItem<SaleType>(
+                          value: saleType,
+                          child: Text(saleType == SaleType.buyNow
+                              ? "Buy Now"
+                              : "Bidding"),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _saleType = value ?? SaleType.buyNow;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 // Form fields (title, description, etc.)
                 TextFormField(
                   decoration: const InputDecoration(labelText: "Title"),
@@ -496,29 +520,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                   },
                 ),
                 const SizedBox(height: 12),
-                // Sale Type Toggle
-                Row(
-                  children: [
-                    const Text("Sale Type: "),
-                    DropdownButton<SaleType>(
-                      value: _saleType,
-                      items: SaleType.values.map((saleType) {
-                        return DropdownMenuItem<SaleType>(
-                          value: saleType,
-                          child: Text(saleType == SaleType.buyNow
-                              ? "Buy Now"
-                              : "Bidding"),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _saleType = value ?? SaleType.buyNow;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
+
                 if (_saleType == SaleType.bid) ...[
                   // Bid End Time Picker
                   ElevatedButton(
