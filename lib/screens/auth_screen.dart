@@ -309,7 +309,7 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.onSurface,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Center(
         child: SingleChildScrollView(
           child: Column(
@@ -322,7 +322,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 child:  AutoSizeText(
                   'Mozayed',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSecondary,
+                    color: Theme.of(context).colorScheme.secondary,
                     fontSize: 40,
                     fontWeight: FontWeight.bold,
                     shadows: [Shadow(color: Theme.of(context).colorScheme.surface, blurRadius: 2, offset: const Offset(1, 1))],
@@ -337,7 +337,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 child: AutoSizeText(
                   "Location based marketplace.",
                   style:  TextStyle(
-                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    color: Theme.of(context).colorScheme.secondary,
                     fontSize: 16,
                     shadows: [
                       Shadow(color: Theme.of(context).colorScheme.surface, offset: const Offset(1, 1)),

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mozayed_app/providers/cart_provider.dart';
 import 'package:mozayed_app/providers/user_and_auth_provider.dart';
 import 'package:mozayed_app/widgets/listing_widget.dart';
+import 'package:http/http.dart' as http;
+import 'dart:developer';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -120,6 +122,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 })
             .toList(),
         'shippingAddress': _addressController.text,
+        "emailSent": false,
       };
       await FirebaseFirestore.instance
           .collection("orders")
@@ -134,6 +137,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Purchase completed successfully.")),
         );
+      }
+      // Call the processNewOrders Cloud Function.
+      const processOrdersUrl =
+          "https://processneworders-cj7ajmydla-uc.a.run.app";
+      try {
+        final response = await http.get(Uri.parse(processOrdersUrl));
+        if (response.statusCode == 200) {
+          log("processNewOrders called successfully: ${response.body}");
+        } else {
+          log("processNewOrders error: ${response.statusCode} ${response.body}");
+        }
+      } catch (error) {
+        log("Error calling processNewOrders: $error");
       }
     }
   }

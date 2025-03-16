@@ -1,9 +1,9 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mozayed_app/layouts/home_content_layout.dart';
+import 'package:mozayed_app/models/user_model.dart';
 import 'package:mozayed_app/providers/user_and_auth_provider.dart';
 import 'package:mozayed_app/screens/cart_screen.dart';
 import 'package:mozayed_app/screens/profile_screen.dart';
@@ -12,6 +12,7 @@ import 'package:mozayed_app/screens/settings_screen.dart';
 import 'package:mozayed_app/screens/user_history_screen.dart';
 import 'package:mozayed_app/screens/user_listing_screen.dart';
 import 'package:mozayed_app/providers/cart_provider.dart';
+import 'package:mozayed_app/screens/adminScreen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -42,64 +43,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     },
   ];
 
-  // Profile menu items shown in the AppBar popup menu.
-  final List<Map<String, dynamic>> _profileMenuItems = [
-    {
-      'title': const Text('Profile'),
-      'icon': Icons.person,
-      'onTap': (context) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const ProfileScreen(),
-          ),
-        );
-      },
-    },
-    {
-      'title': const Text('My items'),
-      'icon': Icons.list_alt,
-      'onTap': (context) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const MyListingsScreen(),
-          ),
-        );
-      },
-    },
-    {
-      'title': const Text('History'),
-      'icon': Icons.history,
-      'onTap': (context) {
-        // Navigate to History Screen
-        Navigator.push(context,
-            MaterialPageRoute(builder: (context) => const UserHistoryScreen()));
-      },
-    },
-    {
-      'title': const Text('Settings'),
-      'icon': Icons.settings,
-      'onTap': (context) {
-        // Navigate to Settings Screen
-        Navigator.push(context,
-            MaterialPageRoute(builder: (context) => const SettingsScreen()));
-      },
-    },
-    {
-      'title': const Text(
-        'Sign Out',
-        style: TextStyle(
-          color: Color.fromARGB(255, 237, 72, 72),
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      'icon': Icons.logout,
-      'onTap': (context) async {
-        await FirebaseAuth.instance.signOut();
-      },
-    },
-  ];
 
   void _onMainItemTapped(int index) {
     setState(() {
@@ -108,14 +51,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   // Build the profile popup menu button for the AppBar.
-  Widget _buildProfileMenuButton(BuildContext ctx) {
+  Widget _buildProfileMenuButton(BuildContext ctx, List<Map<String, dynamic>> profileMenuItems) {
+
     return PopupMenuButton<Map<String, dynamic>>(
       icon: const CircleAvatar(
         child: Icon(Icons.person),
       ),
       onSelected: (item) => item['onTap'](ctx),
       itemBuilder: (context) {
-        return _profileMenuItems.map((item) {
+        return profileMenuItems.map((item) {
           return PopupMenuItem<Map<String, dynamic>>(
             value: item,
             child: Row(
@@ -134,7 +78,80 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final carData = ref.watch(cartProvider);
-    final userData = ref.watch(userDataProvider); // if needed for display
+    final user = ref.watch(userDataProvider);
+    UserModel userData = UserModel.fromMap(user.value!);
+
+    // Profile menu items shown in the AppBar popup menu.
+    final List<Map<String, dynamic>> profileMenuItems = [
+      {
+        'title': const Text('Profile'),
+        'icon': Icons.person,
+        'onTap': (context) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ProfileScreen(),
+            ),
+          );
+        },
+      },
+      {
+        'title': const Text('My items'),
+        'icon': Icons.list_alt,
+        'onTap': (context) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const MyListingsScreen(),
+            ),
+          );
+        },
+      },
+      {
+        'title': const Text('History'),
+        'icon': Icons.history,
+        'onTap': (context) {
+          // Navigate to History Screen
+          Navigator.push(context,
+              MaterialPageRoute(builder: (context) => const UserHistoryScreen()));
+        },
+      },
+      {
+        'title': const Text('Settings'),
+        'icon': Icons.settings,
+        'onTap': (context) {
+          // Navigate to Settings Screen
+          Navigator.push(context,
+              MaterialPageRoute(builder: (context) => const SettingsScreen()));
+        },
+      },
+      {
+        'title': const Text(
+          'Sign Out',
+          style: TextStyle(
+            color: Color.fromARGB(255, 237, 72, 72),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        'icon': Icons.logout,
+        'onTap': (context) async {
+          await FirebaseAuth.instance.signOut();
+        },
+      },
+    ];
+
+    if (userData.admin) {
+      profileMenuItems.add({
+        'title': const Text('Admin Panel'),
+        'icon': Icons.admin_panel_settings,
+        'onTap': (context) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const AdminScreen()),
+          );
+        },
+      });
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -152,8 +169,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             actions: [
               // Display the profile icon as a popup menu button
-              // Passing the context
-              _buildProfileMenuButton(context),
+              // Passing the context and the profile menu items.
+              _buildProfileMenuButton(context, profileMenuItems),
               const SizedBox(width: 10),
             ],
           ),

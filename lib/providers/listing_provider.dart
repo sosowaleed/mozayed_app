@@ -63,6 +63,7 @@ class ListingsNotifier extends StateNotifier<AsyncValue<List<ListingItem>>> {
             .collection('bids')
             .doc(updatedListing.id)
             .update({
+          'title': updatedListing.title,
           'bidEndTime': updatedListing.bidEndTime?.toIso8601String(),
           'currentHighestBid': updatedListing.currentHighestBid,
           'currentHighestBidderId': updatedListing.currentHighestBidderId,
