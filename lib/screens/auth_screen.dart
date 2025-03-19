@@ -58,7 +58,7 @@ class _AuthScreenState extends State<AuthScreen> {
         _userModel["id"] = userCredential.user!.uid;
         _userModel["admin"] = false; // default to false, enabled by backend later
         _userModel["suspended"] = false; // default to false
-        _userModel["activated"] = false; // default to false
+        _userModel["activated"] = true; // default to false
 
         await FirebaseFirestore.instance
             .collection("users")
