@@ -1,23 +1,44 @@
-import 'package:geolocator/geolocator.dart';
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:mozayed_app/models/listing_model.dart';
 import 'package:mozayed_app/models/user_model.dart';
 import 'package:mozayed_app/providers/cart_provider.dart';
 import 'package:mozayed_app/providers/listing_provider.dart';
 import 'package:mozayed_app/providers/user_and_auth_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ListingDetailsScreen extends ConsumerStatefulWidget {
   final ListingItem listingItem;
   const ListingDetailsScreen({super.key, required this.listingItem});
 
   @override
-  ConsumerState<ListingDetailsScreen> createState() => _ListingDetailsScreenState();
+  ConsumerState<ListingDetailsScreen> createState() =>
+      _ListingDetailsScreenState();
 }
 
 class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
   int _currentImageIndex = 0;
   final TextEditingController _bidController = TextEditingController();
+
+  // Controllers for the report form.
+  String? _selectedReportCategory;
+  String? _selectedFlag;
+  final TextEditingController _reportedValueController =
+  TextEditingController();
+  final TextEditingController _reportDescriptionController =
+  TextEditingController();
+
+  // Dropdown options.
+  final List<String> _reportCategoriesForNonBid = ["User", "Item"];
+  final List<String> _reportCategoriesForBid = ["User", "Item", "Bid"];
+
+  final Map<String, List<String>> _flagOptions = {
+    "User": ["Not responding", "Location distant was false", "Other"],
+    "Item": ["Condition worse than advertised", "Item sold was different", "Other"],
+    "Bid": ["Illegitimate bid", "Not responding", "Other"],
+  };
 
   void _previousImage() {
     setState(() {
@@ -40,7 +61,6 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
   }
 
   void _handleBuy() {
-    // Add listing to cart.
     ref.read(cartProvider.notifier).addToCart(widget.listingItem);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -67,7 +87,8 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
     if (enteredBid <= currentBid) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Your bid must be higher than SAR ${currentBid.toStringAsFixed(2)}"),
+          content: Text(
+              "Your bid must be higher than SAR ${currentBid.toStringAsFixed(2)}"),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -88,7 +109,8 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text("Confirm Bid"),
-        content: Text("Are you sure you want to bid SAR ${enteredBid.toStringAsFixed(2)}?"),
+        content:
+        Text("Are you sure you want to bid SAR ${enteredBid.toStringAsFixed(2)}?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -104,20 +126,18 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
 
     if (confirmed == true) {
       // Show a progress indicator for 3 seconds.
-      if (mounted) {
+      if (mounted){
         showDialog(
           context: context,
           barrierDismissible: false,
           builder: (ctx) => const Center(child: CircularProgressIndicator()),
         );
+        await Future.delayed(const Duration(seconds: 3));
       }
-      await Future.delayed(const Duration(seconds: 3));
-      if (mounted) {
+      if (mounted){
         Navigator.of(context).pop(); // Remove the progress indicator
       }
 
-      // Update the listing with the new bid:
-      // Here, we assume ListingItem has methods to update bid values.
       widget.listingItem.setCurrentHighestBid(enteredBid);
       widget.listingItem.setCurrentHighestBidderId(user.id);
       widget.listingItem.setBidHistory({
@@ -136,17 +156,151 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
           ),
         );
       }
-
       _bidController.clear();
       if (mounted) {
-        Navigator.of(context).pop(); // Optionally pop back to the previous screen.
+        Navigator.of(context).pop(); // Optionally pop back to previous screen.
       }
     }
   }
 
+  // Function to open the Report overlay.
+  Future<void> _showReportDialog(UserModel reporter) async {
+    // Set default category based on sale type.
+    _selectedReportCategory = widget.listingItem.saleType == SaleType.bid
+        ? _reportCategoriesForBid.first
+        : _reportCategoriesForNonBid.first;
+    _selectedFlag = _flagOptions[_selectedReportCategory!]!.first;
+    _reportedValueController.clear();
+    _reportDescriptionController.clear();
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Report"),
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              // Get the flag options based on selected category.
+              final flagOptions = _flagOptions[_selectedReportCategory!]!;
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Category Dropdown.
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(labelText: "Category"),
+                      value: _selectedReportCategory,
+                      items: (widget.listingItem.saleType == SaleType.bid
+                          ? _reportCategoriesForBid
+                          : _reportCategoriesForNonBid)
+                          .map((category) => DropdownMenuItem<String>(
+                        value: category,
+                        child: Text(category),
+                      ))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedReportCategory = value;
+                          _selectedFlag = _flagOptions[value!]!.first;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    // Flag Dropdown.
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(labelText: "Flag"),
+                      value: _selectedFlag,
+                      items: flagOptions
+                          .map((flag) => DropdownMenuItem<String>(
+                        value: flag,
+                        child: Text(flag),
+                      ))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedFlag = value;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 10),
+                    // Description Text Field.
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: "Description",
+                        alignLabelWithHint: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 4,
+                      controller: _reportDescriptionController,
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close without saving.
+              },
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                // Build report document with all required details.
+                final listing = widget.listingItem;
+                final reportData = {
+                  "category": _selectedReportCategory,
+                  "flag": _selectedFlag,
+                  "description": _reportDescriptionController.text,
+                  "reporterId": reporter.id,
+                  "reporterEmail": reporter.email,
+                  // Listing details.
+                  "listingId": listing.id,
+                  "listingTitle": listing.title,
+                  "listingOwnerId": listing.ownerId,
+                  "listingOwnerName": listing.ownerName,
+                  "listingCondition": listing.condition,
+                  "handled": false,
+                  "image": listing.image,
+                  // Include currentHighestBidderId if the saleType is bid.
+                  if (listing.saleType == SaleType.bid && listing.currentHighestBidderId != null)
+                    "currentHighestBidderId": listing.currentHighestBidderId,
+                  "timestamp": DateTime.now().toIso8601String(),
+                };
+
+                try {
+                  await FirebaseFirestore.instance
+                      .collection("reports")
+                      .add(reportData);
+                  log("Report saved with details: $reportData");
+                } catch (error) {
+                  log("Error saving report: $error");
+                }
+                Navigator.of(context).pop(); // Close the dialog.
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Report Sent Successfully!"),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+              child: const Text("Save"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
   @override
   void dispose() {
     _bidController.dispose();
+    _reportedValueController.dispose();
+    _reportDescriptionController.dispose();
     super.dispose();
   }
 
@@ -157,7 +311,8 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
     final theme = Theme.of(context);
 
     // Sort the bid history (if any) descending by bidAmount.
-    final List<Map<String, dynamic>> sortedBidHistory = List<Map<String, dynamic>>.from(listing.bidHistory ?? []);
+    final List<Map<String, dynamic>> sortedBidHistory =
+    List<Map<String, dynamic>>.from(listing.bidHistory ?? []);
     sortedBidHistory.sort((a, b) {
       final bidA = a['bidAmount'] as num;
       final bidB = b['bidAmount'] as num;
@@ -227,6 +382,22 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Row with seller name and Report icon.
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Listed by: ${listing.ownerName}",
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _showReportDialog(user),
+                        icon: const Icon(Icons.report, color: Colors.red),
+                        label: const Text("Report", style: TextStyle(color: Colors.red)),
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     "Condition: ${listing.condition}",
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
@@ -254,13 +425,14 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                       style: TextStyle(fontSize: 16, color: theme.textTheme.bodyLarge?.color, fontWeight: FontWeight.w500),
                     ),
                   const SizedBox(height: 2),
-                                  // Bid End Date
+                  // Bid End Date.
                   if (listing.saleType == SaleType.bid) ...[
                     Text(
                       "Bid End Date: ${listing.bidEndTime!.toLocal().toString().substring(0, 16)}",
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: theme.colorScheme.error),
                     ),
-                  const SizedBox(height: 10),],
+                    const SizedBox(height: 10),
+                  ],
                   Text(
                     "Description:",
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge!.color),
@@ -275,15 +447,16 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                     ),
                   ),
                   // New: Bidders List Section (only for bid listings)
+
                   if (listing.saleType == SaleType.bid) ...[
-                    const SizedBox(height: 10),
+
                     Text(
                       "Bidders (Highest to Lowest):",
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge!.color),
                     ),
-                    const SizedBox(height: 5),
+
                     SizedBox(
-                      height: 120,
+                      height: 100,
                       child: sortedBidHistory.isEmpty
                           ? const Center(child: Text("No bids yet."))
                           : ListView.builder(
@@ -310,7 +483,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 5,),
+          const SizedBox(height: 5),
           // Bid/Buy Button Area.
           Container(
             color: theme.scaffoldBackgroundColor,

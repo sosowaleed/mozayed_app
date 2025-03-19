@@ -5,6 +5,8 @@ class UserModel {
   final String name;
   final String email;
   final bool admin;
+  final bool suspended;
+  final bool activated;
   final UserLocation location;
 
   UserModel({
@@ -13,6 +15,8 @@ class UserModel {
     required this.email,
     required this.location,
     this.admin = false, // default to false
+    this.suspended = false, // default to false
+    this.activated = true, // default to true
   });
 
   Map<String, dynamic> toMap() {
@@ -21,6 +25,8 @@ class UserModel {
       'name': name,
       'email': email,
       'admin': admin,
+      'suspended': suspended,
+      'activated': activated,
       'location': location.toMap(),
     };
   }
@@ -31,6 +37,8 @@ class UserModel {
       name: map['name'],
       email: map['email'],
       admin: map['admin'] ?? false,
+      suspended: map['suspended'] ?? false,
+      activated: map['activated'] ?? true,
       location: UserLocation.fromMap(map['location']),
     );
   }

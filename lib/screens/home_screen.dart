@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import 'package:mozayed_app/screens/user_history_screen.dart';
 import 'package:mozayed_app/screens/user_listing_screen.dart';
 import 'package:mozayed_app/providers/cart_provider.dart';
 import 'package:mozayed_app/screens/adminScreen.dart';
+import 'package:mozayed_app/widgets/activation_checker.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -78,9 +80,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final carData = ref.watch(cartProvider);
-    final user = ref.watch(userDataProvider);
-    UserModel userData = UserModel.fromMap(user.value!);
-
+    final userAsyncValue = ref.watch(userDataProvider);
     // Profile menu items shown in the AppBar popup menu.
     final List<Map<String, dynamic>> profileMenuItems = [
       {
@@ -140,130 +140,164 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       },
     ];
 
-    if (userData.admin) {
-      profileMenuItems.add({
-        'title': const Text('Admin Panel'),
-        'icon': Icons.admin_panel_settings,
-        'onTap': (context) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const AdminScreen()),
-          );
-        },
-      });
-    }
+    userAsyncValue.when(
+      data: (userMap) {
+        // Data is available, create the UserModel
+        if (userMap != null) {
+          final UserModel userData = UserModel.fromMap(userMap);
+          if (userData.admin) {
+            profileMenuItems.add({
+              'title': const Text('Admin Panel'),
+              'icon': Icons.admin_panel_settings,
+              'onTap': (context) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AdminScreen()),
+                );
+              },
+            });
+          }
+        } else {
+          // Handle the case where userMap is null
+          log('User data is null');
+        }
+      },
+      loading: () {
+        // Show a loading indicator
+        return const Center(child: CircularProgressIndicator());
+      },
+      error: (error, stackTrace) {
+        // Handle the error
+        log('Error fetching user data: $error');
+        return Center(child: Text('Error: $error'));
+      },
+    );
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isPhone = constraints.maxWidth < 650;
+    final userDataAsync = ref.watch(userStreamProvider);
 
-        return Scaffold(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          appBar: AppBar(
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            title: AutoSizeText(
-              _mainMenuItems[_selectedIndex]['title'] == 'Home'
-                  ? 'Mozayed'
-                  : _mainMenuItems[_selectedIndex]['title'],
-              style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
-            ),
-            actions: [
-              // Display the profile icon as a popup menu button
-              // Passing the context and the profile menu items.
-              _buildProfileMenuButton(context, profileMenuItems),
-              const SizedBox(width: 10),
-            ],
-          ),
-          // For larger screens, use a persistent drawer; for phones, use a bottom nav.
-          body: isPhone
-              ? _mainMenuItems[_selectedIndex]['screen']
-              : Row(
-                  children: [
-                    // Always-open drawer-like widget
-                    Container(
-                      width: 200,
-                      color: Theme.of(context).colorScheme.secondaryContainer,
-                      child: ListView(
-                        children: _mainMenuItems.map((item) {
-                          final index = _mainMenuItems.indexOf(item);
+    return userDataAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text("Error: $error")),
+      data: (userData) {
+        // If no data or account is not activated, show an account disabled screen.
+        if (userData == null || !userData['activated']) {
+          return const AccountNotActivatedScreen();
+        }
+        // Otherwise, display the main content.
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isPhone = constraints.maxWidth < 650;
 
-                          return ListTile(
-                            leading: Icon(item['icon']),
-                            title: Text(item['title']),
-                            trailing: item['title'] == 'Cart'
-                                ? carData.isNotEmpty
-                                    ? Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(
-                                          color: const Color.fromARGB(
-                                              255, 237, 72, 72),
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          '${carData.length}',
-                                          style: const TextStyle(
-                                              color: Color.fromARGB(
-                                                  255,
-                                                  231,
-                                                  231,
-                                                  231),
-                                              fontSize: 12),
-                                        ),
-                                      )
-                                    : null
-                                : null,
-                            selected: index == _selectedIndex,
-                            style: ListTileStyle.drawer,
-                            onTap: () => _onMainItemTapped(index),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                    // Main content area
-                    Expanded(
-                      child: _mainMenuItems[_selectedIndex]['screen'],
-                    ),
-                  ],
+            return Scaffold(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              appBar: AppBar(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                title: AutoSizeText(
+                  _mainMenuItems[_selectedIndex]['title'] == 'Home'
+                      ? 'Mozayed'
+                      : _mainMenuItems[_selectedIndex]['title'],
+                  style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
                 ),
-          bottomNavigationBar: isPhone
-              ? BottomNavigationBar(
-                  items: _mainMenuItems
-                      .map(
-                        (item) => BottomNavigationBarItem(
-                          icon: Stack(
-                            children: [
-                              Icon(item['icon']),
-                              if (item['title'] == 'Cart' && carData.isNotEmpty)
-                                Positioned(
-                                  right: 0,
-                                  child: CircleAvatar(
-                                    backgroundColor: const Color.fromARGB(
-                                        255, 237, 72, 72),
-                                    radius: 8,
-                                    child: Text(
-                                      '${carData.length}',
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: Color.fromARGB(255, 231, 231, 231),
-                                      ),
-                                  ),
+                actions: [
+                  // Display the profile icon as a popup menu button
+                  // Passing the context and the profile menu items.
+                  _buildProfileMenuButton(context, profileMenuItems),
+                  const SizedBox(width: 10),
+                ],
+              ),
+              // For larger screens, use a persistent drawer; for phones, use a bottom nav.
+              body: isPhone
+                  ? _mainMenuItems[_selectedIndex]['screen']
+                  : Row(
+                children: [
+                  // Always-open drawer-like widget
+                  Container(
+                    width: 200,
+                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    child: ListView(
+                      children: _mainMenuItems.map((item) {
+                        final index = _mainMenuItems.indexOf(item);
+
+                        return ListTile(
+                          leading: Icon(item['icon']),
+                          title: Text(item['title']),
+                          trailing: item['title'] == 'Cart'
+                              ? carData.isNotEmpty
+                              ? Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: const Color.fromARGB(
+                                  255, 237, 72, 72),
+                              borderRadius:
+                              BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${carData.length}',
+                              style: const TextStyle(
+                                  color: Color.fromARGB(
+                                      255,
+                                      231,
+                                      231,
+                                      231),
+                                  fontSize: 12),
+                            ),
+                          )
+                              : null
+                              : null,
+                          selected: index == _selectedIndex,
+                          style: ListTileStyle.drawer,
+                          onTap: () => _onMainItemTapped(index),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  // Main content area
+                  Expanded(
+                    child: _mainMenuItems[_selectedIndex]['screen'],
+                  ),
+                ],
+              ),
+              bottomNavigationBar: isPhone
+                  ? BottomNavigationBar(
+                items: _mainMenuItems
+                    .map(
+                      (item) => BottomNavigationBarItem(
+                    icon: Stack(
+                      children: [
+                        Icon(item['icon']),
+                        if (item['title'] == 'Cart' && carData.isNotEmpty)
+                          Positioned(
+                            right: 0,
+                            child: CircleAvatar(
+                              backgroundColor: const Color.fromARGB(
+                                  255, 237, 72, 72),
+                              radius: 8,
+                              child: Text(
+                                '${carData.length}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Color.fromARGB(255, 231, 231, 231),
                                 ),
-                                ),
-                            ],
+                              ),
+                            ),
                           ),
-                          label: item['title'],
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primary,
-                        ),
-                      )
-                      .toList(),
-                  currentIndex: _selectedIndex,
-                  onTap: _onMainItemTapped,
+                      ],
+                    ),
+                    label: item['title'],
+                    backgroundColor:
+                    Theme.of(context).colorScheme.primary,
+                  ),
                 )
-              : null,
+                    .toList(),
+                currentIndex: _selectedIndex,
+                onTap: _onMainItemTapped,
+              )
+                  : null,
+            );
+          },
         );
       },
     );
+
   }
 }

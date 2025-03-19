@@ -54,3 +54,13 @@ StateNotifierProvider<UserDataNotifier, AsyncValue<Map<String, dynamic>?>>(
 final authProvider = StreamProvider<User?>((ref) {
   return FirebaseAuth.instance.authStateChanges();
 });
+
+final userStreamProvider = StreamProvider<Map<String, dynamic>?>((ref) {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return Stream.value(null);
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .snapshots()
+      .map((snapshot) => snapshot.exists ? snapshot.data() : null);
+});

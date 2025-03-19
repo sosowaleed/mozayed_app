@@ -3,6 +3,7 @@ import 'package:mozayed_app/screens/auth_screen.dart';
 import 'package:mozayed_app/screens/home_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mozayed_app/widgets/activation_checker.dart';
 import 'providers/user_and_auth_provider.dart';
 import 'firebase_options.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -74,7 +75,7 @@ class MyApp extends ConsumerWidget {
       darkTheme: darkTheme, // Define the dark theme
       themeMode: themeMode, // Use the themeMode to switch
       home: authState.when(
-        data: (user) => user != null ? const HomeScreen() : const AuthScreen(),
+        data: (user) => user != null ? const ActivationChecker(child: HomeScreen()) : const AuthScreen(),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => const AuthScreen(),
       ),
