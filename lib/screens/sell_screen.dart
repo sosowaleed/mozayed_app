@@ -228,7 +228,9 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     }
     setState(() {
       _isLoading = false;
+      _formKey.currentState!.reset();
     });
+
   }
 
   Future _getAddressFromLatLngWeb({
