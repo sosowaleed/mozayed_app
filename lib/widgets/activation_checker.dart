@@ -1,29 +1,8 @@
+import 'dart:developer';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mozayed_app/providers/user_and_auth_provider.dart';
 
-class ActivationChecker extends ConsumerWidget {
-  final Widget child;
-  const ActivationChecker({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final userDataAsync = ref.watch(userStreamProvider);
-    return userDataAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text("Error: $error")),
-      data: (userData) {
-        // If no data or account is not activated, show an account disabled screen.
-        if (userData == null || !userData['activated']) {
-          return const AccountNotActivatedScreen();
-        }
-        // Otherwise, display the main content.
-        return child;
-      },
-    );
-  }
-}
 
 class AccountNotActivatedScreen extends StatelessWidget {
   const AccountNotActivatedScreen({super.key});
@@ -49,13 +28,13 @@ class AccountNotActivatedScreen extends StatelessWidget {
               Icon(Icons.error_outline, size: 80, color: Colors.red),
               SizedBox(height: 20),
               Text(
-                "Your account is not activated.",
+                "Your account has been deactivated.",
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 12),
               Text(
-                "Please contact support or check your email for an activation link.",
+                "Please contact support via 365mozayed@gmail.com.",
                 textAlign: TextAlign.center,
               ),
             ],

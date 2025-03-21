@@ -230,7 +230,6 @@ class _SellScreenState extends ConsumerState<SellScreen> {
       _isLoading = false;
       _formKey.currentState!.reset();
     });
-
   }
 
   Future _getAddressFromLatLngWeb({
@@ -289,356 +288,400 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     }
   }
 
+  Future<bool?> _isSuspended() async {
+    return await ref.read(userDataProvider.notifier).fetchSuspended();
+  }
+
   @override
   Widget build(BuildContext context) {
     // Assume user data is loaded.
-    UserModel user = UserModel.fromMap(ref.read(userDataProvider).value!);
-    final userAsyncValue = ref.watch(userStreamProvider);
+    final userAsyncValue = ref.read(userDataProvider);
 
     return userAsyncValue.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => Center(child: Text("Error: $error")),
-      data: (userData) {
-        if (userData == null) {
-          return const Center(child: Text("User not logged in"));
-        }
-        if (userData["suspended"] == true) {
-          return const Center(
-            child: Text("Your account has been suspended.\nPlease contact support."),
-          );
-        }
-        // Proceed with SellScreen UI
-        return Scaffold(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          appBar: widget.showBackButton
-              ? AppBar(
-            automaticallyImplyLeading:
-            widget.showBackButton, // This will show the back button
-            title: const Text("Sell"),
-          )
-              : null,
-          body: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    // Images Preview Section
-                    if (_pickedImages.isNotEmpty)
-                      SizedBox(
-                        height: 250,
-                        child: Stack(
-                          children: [
-                            PageView.builder(
-                              controller: _pageController,
-                              itemCount: _pickedImages.length,
-                              onPageChanged: (index) {
-                                setState(() {
-                                  _currentImageIndex = index;
-                                });
-                              },
-                              itemBuilder: (ctx, index) {
-                                return Stack(
-                                  fit: StackFit.expand,
-                                  children: [
-                                    Image.file(
-                                      File(_pickedImages[index].path),
-                                      fit: BoxFit.cover,
-                                    ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) => Center(child: Text("Error: $error")),
+        data: (userData) {
+          if (userData == null) {
+            return const Center(child: Text("User not logged in"));
+          }
+          if (userData["suspended"] == true) {
+            return const Center(
+              child: Text(
+                  "Your account has been suspended.\nPlease contact support."),
+            );
+          }
+          final UserModel user = UserModel.fromMap(userData);
+
+          //checking if a user is suspended
+          return FutureBuilder<bool?>(
+            future: _isSuspended(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text("Error: ${snapshot.error}"));
+              }
+              final isSuspended = snapshot.data ?? false;
+              if (isSuspended) {
+                return const Center(
+                  child: Text(
+                    "Your account has been suspended.\nPlease contact 365mozayed@gmail.com for support.",
+                    textAlign: TextAlign.center,
+                  ),
+                );
+              }
+              // Proceed with SellScreen UI
+              return Scaffold(
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                appBar: widget.showBackButton
+                    ? AppBar(
+                        automaticallyImplyLeading: widget
+                            .showBackButton, // This will show the back button
+                        title: const Text("Sell"),
+                      )
+                    : null,
+                body: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          // Images Preview Section
+                          if (_pickedImages.isNotEmpty)
+                            SizedBox(
+                              height: 250,
+                              child: Stack(
+                                children: [
+                                  PageView.builder(
+                                    controller: _pageController,
+                                    itemCount: _pickedImages.length,
+                                    onPageChanged: (index) {
+                                      setState(() {
+                                        _currentImageIndex = index;
+                                      });
+                                    },
+                                    itemBuilder: (ctx, index) {
+                                      return Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          Image.file(
+                                            File(_pickedImages[index].path),
+                                            fit: BoxFit.cover,
+                                          ),
+                                          Positioned(
+                                            top: 5,
+                                            right: 0,
+                                            left: 0,
+                                            child: IconButton(
+                                              icon: const Icon(Icons.close,
+                                                  color: Colors.red),
+                                              onPressed: () => _removeImage(
+                                                  xFile: _pickedImages[index]),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                  // Left Arrow (only if more than one image and not on the first page)
+                                  if (_pickedImages.length > 1 &&
+                                      _currentImageIndex > 0)
                                     Positioned(
-                                      top: 5,
-                                      right: 0,
                                       left: 0,
+                                      top: 0,
+                                      bottom: 0,
                                       child: IconButton(
-                                        icon: const Icon(Icons.close,
-                                            color: Colors.red),
-                                        onPressed: () => _removeImage(
-                                            xFile: _pickedImages[index]),
+                                        padding: const EdgeInsets.all(32),
+                                        icon: const Icon(Icons.arrow_back_ios,
+                                            size: 15, color: Colors.grey),
+                                        onPressed: () {
+                                          _pageController.previousPage(
+                                              duration: const Duration(
+                                                  milliseconds: 300),
+                                              curve: Curves.easeInOut);
+                                        },
                                       ),
                                     ),
-                                  ],
-                                );
-                              },
-                            ),
-                            // Left Arrow (only if more than one image and not on the first page)
-                            if (_pickedImages.length > 1 && _currentImageIndex > 0)
-                              Positioned(
-                                left: 0,
-                                top: 0,
-                                bottom: 0,
-                                child: IconButton(
-                                  padding: const EdgeInsets.all(32),
-                                  icon: const Icon(Icons.arrow_back_ios,
-                                      size: 15, color: Colors.grey),
-                                  onPressed: () {
-                                    _pageController.previousPage(
-                                        duration: const Duration(milliseconds: 300),
-                                        curve: Curves.easeInOut);
-                                  },
-                                ),
-                              ),
-                            // Right Arrow (only if more than one image and not on the last page)
-                            if (_pickedImages.length > 1 &&
-                                _currentImageIndex < _pickedImages.length - 1)
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                bottom: 0,
-                                child: IconButton(
-                                  padding: const EdgeInsets.all(32),
-                                  icon: const Icon(Icons.arrow_forward_ios,
-                                      size: 15, color: Colors.grey),
-                                  onPressed: () {
-                                    _pageController.nextPage(
-                                        duration: const Duration(milliseconds: 300),
-                                        curve: Curves.easeInOut);
-                                  },
-                                ),
-                              ),
-                            // Image count indicator.
-                            Positioned(
-                              bottom: 8,
-                              left: 0,
-                              right: 0,
-                              child: Center(
-                                child: Text(
-                                  '${_currentImageIndex + 1} / ${_pickedImages.length}',
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 18),
-                                ),
+                                  // Right Arrow (only if more than one image and not on the last page)
+                                  if (_pickedImages.length > 1 &&
+                                      _currentImageIndex <
+                                          _pickedImages.length - 1)
+                                    Positioned(
+                                      right: 0,
+                                      top: 0,
+                                      bottom: 0,
+                                      child: IconButton(
+                                        padding: const EdgeInsets.all(32),
+                                        icon: const Icon(
+                                            Icons.arrow_forward_ios,
+                                            size: 15,
+                                            color: Colors.grey),
+                                        onPressed: () {
+                                          _pageController.nextPage(
+                                              duration: const Duration(
+                                                  milliseconds: 300),
+                                              curve: Curves.easeInOut);
+                                        },
+                                      ),
+                                    ),
+                                  // Image count indicator.
+                                  Positioned(
+                                    bottom: 8,
+                                    left: 0,
+                                    right: 0,
+                                    child: Center(
+                                      child: Text(
+                                        '${_currentImageIndex + 1} / ${_pickedImages.length}',
+                                        style: const TextStyle(
+                                            color: Colors.white, fontSize: 18),
+                                      ),
+                                    ),
+                                  )
+                                ],
                               ),
                             )
-                          ],
-                        ),
-                      )
-                    else
-                    // If no images have been picked, show a placeholder.
-                      Container(
-                        height: 250,
-                        color: Theme.of(context).colorScheme.tertiaryContainer,
-                        child: const Center(child: Text("No images selected")),
-                      ),
-                    const SizedBox(height: 8),
-                    // Buttons to pick images.
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.photo_library),
-                          label: const Text("Gallery"),
-                          onPressed: () => _pickImage(ImageSource.gallery),
-                        ),
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.camera_alt),
-                          label: const Text("Camera"),
-                          onPressed: () => _pickImage(ImageSource.camera),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    // Sale Type Toggle
-                    Row(
-                      children: [
-                        const Text("Sale Type: "),
-                        DropdownButton<SaleType>(
-                          value: _saleType,
-                          items: SaleType.values.map((saleType) {
-                            return DropdownMenuItem<SaleType>(
-                              value: saleType,
-                              child: Text(saleType == SaleType.buyNow
-                                  ? "Buy Now"
-                                  : "Bidding"),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _saleType = value ?? SaleType.buyNow;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    // Form fields (title, description, etc.)
-                    TextFormField(
-                      decoration: const InputDecoration(labelText: "Title"),
-                      validator: (value) {
-                        if (value == null || value.trim().length < 4) {
-                          return "Please enter a valid title (at least 4 characters).";
-                        }
-                        return null;
-                      },
-                      onSaved: (value) {
-                        _listingData["title"] = value;
-                      },
-                    ),
-                    TextFormField(
-                      decoration: const InputDecoration(labelText: "Description"),
-                      maxLines: 3,
-                      onSaved: (value) {
-                        _listingData["description"] = value;
-                      },
-                    ),
-                    //added this part to clear the price when the sale type is not buyNow
-                    if (_saleType == SaleType.bid)
-                      const Text(""),
-                    if (_saleType != SaleType.bid)
-                      TextFormField(
-                        decoration: const InputDecoration(labelText: "Price"),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || double.tryParse(value) == null) {
-                            return "Please enter a valid price.";
-                          } else if (double.parse(value) <= 0) {
-                            return "Price must be greater than zero.";
-                          }
-                          return null;
-                        },
-                        onSaved: (value) {
-                          _listingData["price"] = value;
-                        },
-                      ),
-                    TextFormField(
-                      decoration: const InputDecoration(labelText: "Quantity"),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || int.tryParse(value) == null) {
-                          return "Please enter a valid quantity.";
-                        } else if (int.parse(value) <= 0) {
-                          return "Quantity must be greater than zero.";
-                        }
-                        return null;
-                      },
-                      onSaved: (value) {
-                        _listingData["quantity"] = value;
-                      },
-                    ),
-                    const SizedBox(
-                      height: 5,
-                    ),
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: "Condition"),
-                      value: _selectedCondition,
-                      items: _conditions.map((condition) {
-                        return DropdownMenuItem<String>(
-                          value: condition,
-                          child: Text(condition),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedCondition = value!;
-                        });
-                      },
-                      onSaved: (value) {
-                        _listingData["condition"] = value;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    if (_saleType == SaleType.bid) ...[
-                      // Bid End Time Picker
-                      ElevatedButton(
-                        onPressed: () async {
-                          DateTime? picked = await showDatePicker(
-                            context: context,
-                            initialDate:
-                            DateTime.now().add(const Duration(days: 1)),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(const Duration(days: 30)),
-                          );
-                          if (picked != null) {
-                            // Optionally show time picker as well.
-                            setState(() {
-                              _listingData["bidEndTime"] = picked.toIso8601String();
-                            });
-                          }
-                        },
-                        child: Text(
-                          _listingData["bidEndTime"] != null
-                              ? "Bid End: ${_listingData["bidEndTime"]}"
-                              : "Select Bid End Time",
-                        ),
-                      ),
-                      // Starting Bid Field
-                      TextFormField(
-                        decoration:
-                        const InputDecoration(labelText: "Starting Bid"),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || double.tryParse(value) == null) {
-                            return "Please enter a valid starting bid.";
-                          }
-                          return null;
-                        },
-                        onSaved: (value) {
-                          _listingData["startingBid"] = value;
-                        },
-                      ),
-                    ],
-
-                    Row(
-                      children: [
-                        const Text("Category: "),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            decoration: const InputDecoration(
-                              labelText: "Select Category",
+                          else
+                            // If no images have been picked, show a placeholder.
+                            Container(
+                              height: 250,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .tertiaryContainer,
+                              child: const Center(
+                                  child: Text("No images selected")),
                             ),
-                            value: _selectedCategory,
-                            items: _categoryOptions.map((category) {
-                              return DropdownMenuItem<String>(
-                                value: category,
-                                child: Text(category),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              setState(() {
-                                _selectedCategory = val ?? "Other";
-                              });
+                          const SizedBox(height: 8),
+                          // Buttons to pick images.
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.photo_library),
+                                label: const Text("Gallery"),
+                                onPressed: () =>
+                                    _pickImage(ImageSource.gallery),
+                              ),
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.camera_alt),
+                                label: const Text("Camera"),
+                                onPressed: () => _pickImage(ImageSource.camera),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          // Sale Type Toggle
+                          Row(
+                            children: [
+                              const Text("Sale Type: "),
+                              DropdownButton<SaleType>(
+                                value: _saleType,
+                                items: SaleType.values.map((saleType) {
+                                  return DropdownMenuItem<SaleType>(
+                                    value: saleType,
+                                    child: Text(saleType == SaleType.buyNow
+                                        ? "Buy Now"
+                                        : "Bidding"),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _saleType = value ?? SaleType.buyNow;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          // Form fields (title, description, etc.)
+                          TextFormField(
+                            decoration:
+                                const InputDecoration(labelText: "Title"),
+                            validator: (value) {
+                              if (value == null || value.trim().length < 4) {
+                                return "Please enter a valid title (at least 4 characters).";
+                              }
+                              return null;
                             },
-                            onSaved: (val) {
-                              _listingData["category"] = val;
+                            onSaved: (value) {
+                              _listingData["title"] = value;
                             },
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    // Location Picker
-                    Column(
-                      children: [
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.map),
-                          onPressed: _loadMapPicker,
-                          label: const Text("Select Location"),
-                        ),
-                        _isGettingLocation
-                            ? const CircularProgressIndicator()
-                            : Text(_address ?? "No address selected"),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    _isLoading
-                        ? const CircularProgressIndicator()
-                        : ElevatedButton(
-                      onPressed: () {
-                        if (!_isLoading) {
-                          _saveListing(user);
-                        }
-                      },
-                      child: const Text("Publish Listing"),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
+                          TextFormField(
+                            decoration:
+                                const InputDecoration(labelText: "Description"),
+                            maxLines: 3,
+                            onSaved: (value) {
+                              _listingData["description"] = value;
+                            },
+                          ),
+                          //added this part to clear the price when the sale type is not buyNow
+                          if (_saleType == SaleType.bid) const Text(""),
+                          if (_saleType != SaleType.bid)
+                            TextFormField(
+                              decoration:
+                                  const InputDecoration(labelText: "Price"),
+                              keyboardType: TextInputType.number,
+                              validator: (value) {
+                                if (value == null ||
+                                    double.tryParse(value) == null) {
+                                  return "Please enter a valid price.";
+                                } else if (double.parse(value) <= 0) {
+                                  return "Price must be greater than zero.";
+                                }
+                                return null;
+                              },
+                              onSaved: (value) {
+                                _listingData["price"] = value;
+                              },
+                            ),
+                          TextFormField(
+                            decoration:
+                                const InputDecoration(labelText: "Quantity"),
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (value == null ||
+                                  int.tryParse(value) == null) {
+                                return "Please enter a valid quantity.";
+                              } else if (int.parse(value) <= 0) {
+                                return "Quantity must be greater than zero.";
+                              }
+                              return null;
+                            },
+                            onSaved: (value) {
+                              _listingData["quantity"] = value;
+                            },
+                          ),
+                          const SizedBox(
+                            height: 5,
+                          ),
+                          DropdownButtonFormField<String>(
+                            decoration:
+                                const InputDecoration(labelText: "Condition"),
+                            value: _selectedCondition,
+                            items: _conditions.map((condition) {
+                              return DropdownMenuItem<String>(
+                                value: condition,
+                                child: Text(condition),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedCondition = value!;
+                              });
+                            },
+                            onSaved: (value) {
+                              _listingData["condition"] = value;
+                            },
+                          ),
+                          const SizedBox(height: 12),
 
+                          if (_saleType == SaleType.bid) ...[
+                            // Bid End Time Picker
+                            ElevatedButton(
+                              onPressed: () async {
+                                DateTime? picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: DateTime.now()
+                                      .add(const Duration(days: 1)),
+                                  firstDate: DateTime.now(),
+                                  lastDate: DateTime.now()
+                                      .add(const Duration(days: 30)),
+                                );
+                                if (picked != null) {
+                                  // Optionally show time picker as well.
+                                  setState(() {
+                                    _listingData["bidEndTime"] =
+                                        picked.toIso8601String();
+                                  });
+                                }
+                              },
+                              child: Text(
+                                _listingData["bidEndTime"] != null
+                                    ? "Bid End: ${_listingData["bidEndTime"]}"
+                                    : "Select Bid End Time",
+                              ),
+                            ),
+                            // Starting Bid Field
+                            TextFormField(
+                              decoration: const InputDecoration(
+                                  labelText: "Starting Bid"),
+                              keyboardType: TextInputType.number,
+                              validator: (value) {
+                                if (value == null ||
+                                    double.tryParse(value) == null) {
+                                  return "Please enter a valid starting bid.";
+                                }
+                                return null;
+                              },
+                              onSaved: (value) {
+                                _listingData["startingBid"] = value;
+                              },
+                            ),
+                          ],
+
+                          Row(
+                            children: [
+                              const Text("Category: "),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  decoration: const InputDecoration(
+                                    labelText: "Select Category",
+                                  ),
+                                  value: _selectedCategory,
+                                  items: _categoryOptions.map((category) {
+                                    return DropdownMenuItem<String>(
+                                      value: category,
+                                      child: Text(category),
+                                    );
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _selectedCategory = val ?? "Other";
+                                    });
+                                  },
+                                  onSaved: (val) {
+                                    _listingData["category"] = val;
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          // Location Picker
+                          Column(
+                            children: [
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.map),
+                                onPressed: _loadMapPicker,
+                                label: const Text("Select Location"),
+                              ),
+                              _isGettingLocation
+                                  ? const CircularProgressIndicator()
+                                  : Text(_address ?? "No address selected"),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          _isLoading
+                              ? const CircularProgressIndicator()
+                              : ElevatedButton(
+                                  onPressed: () {
+                                    if (!_isLoading) {
+                                      _saveListing(user);
+                                    }
+                                  },
+                                  child: const Text("Publish Listing"),
+                                ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        });
   }
 }

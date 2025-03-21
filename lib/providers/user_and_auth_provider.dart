@@ -42,6 +42,42 @@ class UserDataNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>?>> 
       rethrow;
     }
   }
+
+  /// Fetches the 'suspended' attribute for the current user.
+  Future<bool?> fetchSuspended() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      if (doc.exists && doc.data() != null) {
+        return doc.data()!['suspended'] as bool?;
+      }
+      return null;
+    } catch (e) {
+      throw Exception("Error fetching suspended attribute: $e");
+    }
+  }
+
+  /// Fetches the 'activated' attribute for the current user.
+  Future<bool?> fetchActivated() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      if (doc.exists && doc.data() != null) {
+        return doc.data()!['activated'] as bool?;
+      }
+      return null;
+    } catch (e) {
+      throw Exception("Error fetching activated attribute: $e");
+    }
+  }
 }
 
 /// a Riverpod provider that exposes the [UserDataNotifier].
@@ -53,14 +89,4 @@ StateNotifierProvider<UserDataNotifier, AsyncValue<Map<String, dynamic>?>>(
 // a stream provider that exposes the current user's authentication state.
 final authProvider = StreamProvider<User?>((ref) {
   return FirebaseAuth.instance.authStateChanges();
-});
-
-final userStreamProvider = StreamProvider<Map<String, dynamic>?>((ref) {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return Stream.value(null);
-  return FirebaseFirestore.instance
-      .collection('users')
-      .doc(user.uid)
-      .snapshots()
-      .map((snapshot) => snapshot.exists ? snapshot.data() : null);
 });

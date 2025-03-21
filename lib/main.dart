@@ -75,7 +75,7 @@ class MyApp extends ConsumerWidget {
       darkTheme: darkTheme, // Define the dark theme
       themeMode: themeMode, // Use the themeMode to switch
       home: authState.when(
-        data: (user) => user != null ? const ActivationChecker(child: HomeScreen()) : const AuthScreen(),
+        data: (user) => user != null ? const HomeScreen() : const AuthScreen(),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => const AuthScreen(),
       ),
