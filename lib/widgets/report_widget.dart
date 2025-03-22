@@ -1,8 +1,10 @@
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:mozayed_app/models/report_model.dart';
 import 'package:mozayed_app/models/user_model.dart';
 import 'package:mozayed_app/screens/report_details_screen.dart';
+import 'dart:typed_data';
 
 class ReportWidget extends StatelessWidget {
   final ReportModel report;
@@ -16,6 +18,16 @@ class ReportWidget extends StatelessWidget {
         return Icons.person;
       default:
         return Icons.report;
+    }
+  }
+
+  // Helper function to get image bytes from Firebase Storage
+  Future<Uint8List?> _getImageBytes(String imageUrl) async {
+    try {
+      final ref = FirebaseStorage.instance.refFromURL(imageUrl);
+      return await ref.getData();
+    } catch (e) {
+      return null;
     }
   }
 
@@ -52,12 +64,23 @@ class ReportWidget extends StatelessWidget {
                     report.image.isNotEmpty
                     ? Hero(
                         tag: report.id,
-                        child: Image.network(
-                                        report.image[0],
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                        height: double.infinity,
-                                      ),
+                        child: FutureBuilder<Uint8List?>(
+                          future: _getImageBytes(report.image[0]),
+                          builder: (BuildContext context, AsyncSnapshot<Uint8List?> snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const Center(child: CircularProgressIndicator());
+                            } else if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
+                              return const Center(child: Icon(Icons.error));
+                            } else {
+                              return Image.memory(
+                                snapshot.data!,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                              );
+                            }
+                          },
+                        ),
                     )
                     : Icon(
                   _iconForCategory(report.category),

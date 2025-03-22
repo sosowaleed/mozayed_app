@@ -15,10 +15,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EditListingScreen extends ConsumerStatefulWidget {
   final ListingItem listing;
-  const EditListingScreen({super.key, required this.listing});
+
+  const EditListingScreen({
+    super.key,
+    required this.listing,
+  });
 
   @override
-  ConsumerState<EditListingScreen> createState() => _EditListingScreenState();
+  ConsumerState<EditListingScreen> createState() =>
+      _EditListingScreenState();
 }
 
 class _EditListingScreenState extends ConsumerState<EditListingScreen> {
@@ -42,7 +47,9 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
   final ImagePicker _picker = ImagePicker();
   late PageController _pageController;
   final List<String> _removedImageUrls = [];
-
+  // Local image cache for editing.
+  List<Uint8List?> _localCache = [];
+  bool _isLocalCacheLoading = true;
   @override
   void initState() {
     super.initState();
@@ -67,8 +74,36 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     _saleType = widget.listing.saleType;
     _selectedCategory = widget.listing.category;
     _pageController = PageController();
+
+    // Prefetching images from Firebase Storage.
+    _prefetchImages();
   }
 
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  // Prefetch all image bytes for the current listing.
+  Future<void> _prefetchImages() async {
+    final futures = widget.listing.image.map((url) => _getImageBytes(url)).toList();
+    _localCache = await Future.wait(futures);
+    setState(() {
+      _isLocalCacheLoading = false;
+    });
+  }
+
+  // Helper function to get image bytes from Firebase Storage.
+  Future<Uint8List?> _getImageBytes(String imageUrl) async {
+    try {
+      final ref = FirebaseStorage.instance.refFromURL(imageUrl);
+      return await ref.getData();
+    } catch (e) {
+      log("Error fetching image: $e");
+      return null;
+    }
+  }
   // Uploading images to Firebase Storage
   Future<String> uploadImage(
       File imageFile, String listingId, int index) async {
@@ -303,33 +338,21 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                       PageView(
                         controller: _pageController,
                         children: [
-                          ...(_listingData["image"] as List<String>)
-                              .map((imgUrl) => Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      Image.network(imgUrl, fit: BoxFit.cover),
-                                      Positioned(
-                                        top: 5,
-                                        left: 0,
-                                        right: 0,
-                                        child: IconButton(
-                                          icon: const Icon(
-                                            Icons.close,
-                                            color: Colors.red,
-                                          ),
-                                          onPressed: () => _removeImage(
-                                              imageUrl: imgUrl, xFile: null),
-                                        ),
-                                      ),
-                                    ],
-                                  )),
-                          ..._pickedImages.map((xFile) => Stack(
+                          // Display prefetched images from Firebase Storage.
+                          if (!_isLocalCacheLoading)
+                            ...List.generate(
+                              (_listingData["image"] as List<String>).length,
+                                  (index) => Stack(
                                 fit: StackFit.expand,
                                 children: [
-                                  Image.file(File(xFile.path),
-                                      fit: BoxFit.cover),
+                                  _localCache[index] != null
+                                      ? Image.memory(
+                                    _localCache[index]!,
+                                    fit: BoxFit.cover,
+                                  )
+                                      : const Center(child: Icon(Icons.error)),
                                   Positioned(
-                                    top: 8,
+                                    top: 5,
                                     left: 0,
                                     right: 0,
                                     child: IconButton(
@@ -338,11 +361,36 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                                         color: Colors.red,
                                       ),
                                       onPressed: () => _removeImage(
-                                          imageUrl: null, xFile: xFile),
+                                          imageUrl: (_listingData["image"] as List<String>)[index],
+                                          xFile: null),
                                     ),
                                   ),
                                 ],
-                              )),
+                              ),
+                            )
+                          else
+                          // If not loaded yet, display a loading indicator for each image.
+                            ...List.generate(
+                              (_listingData["image"] as List<String>).length,
+                                  (index) => const Center(child: CircularProgressIndicator()),
+                            ),
+                          // Newly picked images remain unchanged.
+                          ..._pickedImages.map((xFile) => Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.file(File(xFile.path), fit: BoxFit.cover),
+                              Positioned(
+                                top: 8,
+                                left: 0,
+                                right: 0,
+                                child: IconButton(
+                                  icon: const Icon(Icons.close, color: Colors.red),
+                                  onPressed: () => _removeImage(
+                                      imageUrl: null, xFile: xFile),
+                                ),
+                              ),
+                            ],
+                          )),
                         ],
                       ),
                       // Previous arrow

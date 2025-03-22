@@ -1,11 +1,13 @@
 import 'dart:developer';
 import 'dart:convert';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mozayed_app/models/report_model.dart';
 import 'package:mozayed_app/models/user_model.dart';
+import 'dart:typed_data';
 
 enum ReportAction { warn, suspend, deactivate, remove }
 
@@ -22,7 +24,34 @@ class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
   bool _processing = false;
   int _currentImageIndex = 0;
   final TextEditingController _actionMessageController = TextEditingController();
+  // Local cache for report images.
+  bool _isImagesLoading = true;
+  List<Uint8List?> _localCache = [];
 
+  @override
+  void initState() {
+    super.initState();
+    _prefetchReportImages();
+  }
+
+  Future<void> _prefetchReportImages() async {
+    if (widget.report.image.isEmpty) {
+      _localCache = [];
+    } else {
+      _localCache = await Future.wait(widget.report.image.map((url) async {
+        try {
+          final ref = FirebaseStorage.instance.refFromURL(url);
+          return await ref.getData();
+        } catch (e) {
+          log("Error fetching report image: $e");
+          return null;
+        }
+      }).toList());
+    }
+    setState(() {
+      _isImagesLoading = false;
+    });
+  }
   // Shows an overlay dialog to collect admin message; returns the entered message.
   Future<String?> _showActionOverlay() async {
     _actionMessageController.clear();
@@ -174,6 +203,23 @@ class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
     } else {
       // For an item or bid report, if action is remove, delete the listing.
       if (action == ReportAction.remove) {
+        // Get a reference to the container (folder) for this item/bid.
+        final containerRef = FirebaseStorage.instance
+            .ref()
+            .child("listing_images")
+            .child(report.listingId);
+        // List all items in this container.
+        final listResult = await containerRef.listAll();
+        // Delete each file.
+        for (var itemRef in listResult.items) {
+          try {
+            await itemRef.delete();
+            log("Deleted image: ${itemRef.fullPath}");
+          } catch (e) {
+            log("Error deleting image ${itemRef.fullPath}: $e");
+          }
+        }
+        // Delete the container itself.
         await FirebaseFirestore.instance
             .collection("listings")
             .doc(report.listingId)
@@ -224,11 +270,15 @@ class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(10),
-                        child: Image.network(
-                          report.image[_currentImageIndex],
+                        child: _isImagesLoading
+                            ? const Center(child: CircularProgressIndicator())
+                            : _localCache[_currentImageIndex] != null
+                            ? Image.memory(
+                          _localCache[_currentImageIndex]!,
                           fit: BoxFit.cover,
                           width: double.infinity,
-                        ),
+                        )
+                            : const Center(child: Icon(Icons.error)),
                       ),
                       // Left Arrow.
                       Positioned(

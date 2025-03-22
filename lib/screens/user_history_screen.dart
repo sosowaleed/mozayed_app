@@ -1,10 +1,13 @@
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mozayed_app/models/listing_model.dart';
 import 'package:mozayed_app/providers/listing_provider.dart';
 import 'package:mozayed_app/providers/orders_provider.dart';
 import 'package:mozayed_app/providers/bids_provider.dart';
 import 'package:mozayed_app/screens/listing_details_screen.dart';
+import 'dart:typed_data';
 
 class UserHistoryScreen extends ConsumerStatefulWidget {
   const UserHistoryScreen({super.key});
@@ -14,6 +17,35 @@ class UserHistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
+  // Change the cache to hold a list of images per listing.
+  final Map<String, List<Uint8List?>> _imageCache = {};
+  bool _isLoadingImages = true;
+
+  // Helper function to get image bytes from Firebase Storage.
+  Future<Uint8List?> _getImageBytes(String imageUrl) async {
+    try {
+      final ref = FirebaseStorage.instance.refFromURL(imageUrl);
+      return await ref.getData();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Prefetch all images for each listing.
+  Future<void> _prefetchImages(List<ListingItem> listings) async {
+    await Future.wait(listings.map((listing) async {
+      if (listing.image.isNotEmpty) {
+        // Fetch every image for this listing.
+        final futures = listing.image.map((url) => _getImageBytes(url)).toList();
+        _imageCache[listing.id] = await Future.wait(futures);
+      } else {
+        _imageCache[listing.id] = [];
+      }
+    }));
+    setState(() {
+      _isLoadingImages = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +58,10 @@ class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: AutoSizeText('User History', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),),
+        title: AutoSizeText(
+          'User History',
+          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+        ),
         backgroundColor: Theme.of(context).colorScheme.primary,
       ),
       body: listingsAsync.when(
@@ -40,11 +75,15 @@ class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
               // Purchases Section.
               const Padding(
                 padding: EdgeInsets.all(8.0),
-                child: AutoSizeText("Purchases", style: TextStyle(fontSize: 20)),
+                child: AutoSizeText(
+                  "Purchases",
+                  style: TextStyle(fontSize: 20),
+                ),
               ),
               Expanded(
                 child: ordersAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                  const Center(child: CircularProgressIndicator()),
                   error: (error, stack) =>
                       Center(child: AutoSizeText("Error loading orders: $error")),
                   data: (orders) {
@@ -63,117 +102,163 @@ class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
                         }
                       }
                     }
-
-                    final purchasedIds = purchasedOrders
-                        .map((order) => order["listingId"])
-                        .toSet();
-                    final purchasedSet = purchasedIds.toSet();
+                    final purchasedIds =
+                    purchasedOrders.map((order) => order["listingId"]).toSet();
                     final purchasedListings = allListings
-                        .where((listing) => purchasedSet.contains(listing.id))
+                        .where((listing) => purchasedIds.contains(listing.id))
                         .toList();
-                    if (purchasedListings.isEmpty) {
-                      return const Center(child: AutoSizeText("No purchases found."));
-                    }
-                    return ListView.builder(
-                      itemCount: purchasedListings.length,
-                      itemBuilder: (context, index) {
-                        final listing = purchasedListings[index];
-                        //get the data needed from the current purchase order.
-                        final currentOrder = purchasedOrders.firstWhere((order) => order["listingId"] == listing.id);
-                        return ListTile(
-                          shape: const Border(bottom: BorderSide(color: Colors.grey)),
-                          leading: listing.image.isNotEmpty
-                              ? Image.network(
-                            listing.image.first,
-                            width: 50,
-                            height: 50,
-                            fit: BoxFit.cover,
-                          )
-                              : const Icon(Icons.image),
-                          title: AutoSizeText(listing.title),
-                          subtitle: AutoSizeText(
-                              "\$${listing.price.toStringAsFixed(2)} | Ordered Qty: ${currentOrder["quantity"]} | Ordered on: ${currentOrder["orderDate"]}"),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ListingDetailsScreen(listingItem: listing),
+
+                    // Process bids.
+                    return bidsAsync.when(
+                      loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                      error: (error, stack) =>
+                          Center(child: AutoSizeText("Error loading bids: $error")),
+                      data: (bidDocs) {
+                        final bidIds = bidDocs
+                            .map<String>((bid) => bid["listingId"].toString())
+                            .toSet();
+                        final bidListings = allListings
+                            .where((listing) => bidIds.contains(listing.id))
+                            .toList();
+
+                        // Combine listings from both purchases and bids into one union.
+                        final Map<String, ListingItem> unionMap = {};
+                        for (var listing in purchasedListings) {
+                          unionMap[listing.id] = listing;
+                        }
+                        for (var listing in bidListings) {
+                          unionMap[listing.id] = listing;
+                        }
+                        final unionListings = unionMap.values.toList();
+
+                        // Prefetch images for all union listings if not done already.
+                        if (_isLoadingImages && unionListings.isNotEmpty) {
+                          _prefetchImages(unionListings);
+                        }
+
+                        return Column(
+                          children: [
+                            // Purchases List.
+                            Expanded(
+                              child: ListView.builder(
+                                itemCount: purchasedListings.length,
+                                itemBuilder: (context, index) {
+                                  final listing = purchasedListings[index];
+                                  final currentOrder = purchasedOrders.firstWhere(
+                                          (order) => order["listingId"] == listing.id);
+                                  return ListTile(
+                                    shape: const Border(
+                                      bottom: BorderSide(color: Colors.grey),
+                                    ),
+                                    leading: listing.image.isNotEmpty
+                                        ? _isLoadingImages
+                                        ? const SizedBox(
+                                      width: 50,
+                                      height: 50,
+                                      child: Center(
+                                          child:
+                                          CircularProgressIndicator()),
+                                    )
+                                        : (_imageCache[listing.id]?.isNotEmpty ??
+                                        false)
+                                        ? Image.memory(
+                                      // Show the first image.
+                                      _imageCache[listing.id]![0]!,
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                    )
+                                        : const Icon(Icons.error, size: 50)
+                                        : const Icon(Icons.image, size: 50),
+                                    title: AutoSizeText(listing.title),
+                                    subtitle: AutoSizeText(
+                                        "\$${listing.price.toStringAsFixed(2)} | Ordered Qty: ${currentOrder["quantity"]} | Ordered on: ${currentOrder["orderDate"]}"),
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              ListingDetailsScreen(
+                                                listingItem: listing,
+                                                // Pass the full cached list; if not available, pass an empty list.
+                                                _imageCache[listing.id] ??
+                                                    const [],
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
                               ),
-                            );
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-              const Divider(thickness: 2),
-              // Current Bids Section.
-              const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: AutoSizeText("Current Bids", style: TextStyle(fontSize: 20)),
-              ),
-              Expanded(
-                child: bidsAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (error, stack) =>
-                      Center(child: AutoSizeText("Error loading bids: $error")),
-                  data: (bidDocs) {
-                    // Extract listing IDs from bid documents.
-                    final bidIds = bidDocs
-                        .map<String>((bid) => bid["listingId"].toString())
-                        .toSet()
-                        .toList();
-                    final bidListings = allListings
-                        .where((listing) => bidIds.contains(listing.id))
-                        .toList();
-                    if (bidListings.isEmpty) {
-                      return const Center(child: AutoSizeText("No current bids found."));
-                    }
-                    return ListView.builder(
-                      itemCount: bidListings.length,
-                      itemBuilder: (context, index) {
-                        final listing = bidListings[index];
-                        return ListTile(
-                          shape: const Border(bottom: BorderSide(color: Colors.grey)),
-                          subtitle: bidsAsync.when(
-                            loading: () => const Center(child: CircularProgressIndicator()),
-                            error: (error, stack) =>
-                                Center(child: AutoSizeText("Error loading bids: $error")),
-                            data: (bidDocs) {
-                              final userBidHistory = bidDocs.firstWhere(
-                                      (bid) => bid["listingId"].toString() == listing.id,
-                                  orElse: () => {"bidHistory": []})["bidHistory"] as List<dynamic>;
-
-                              final userBid = userBidHistory.last["bidAmount"];
-                              return AutoSizeText(
-                                  "Your Bid: \$$userBid "
-                                      "Current Highest Bid: \$${(listing.currentHighestBid ?? listing.startingBid ?? listing.price).toStringAsFixed(2)} | "
-                                      "End Date: ${listing.bidEndTime}");
-                            },
-                          ),
-
-
-
-                          leading: listing.image.isNotEmpty
-                              ? Image.network(
-                            listing.image.first,
-                            width: 50,
-                            height: 50,
-                            fit: BoxFit.cover,
-                          )
-                              : const Icon(Icons.image),
-                          title: AutoSizeText(listing.title),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ListingDetailsScreen(listingItem: listing),
+                            ),
+                            const Divider(thickness: 2),
+                            // Bids List.
+                            Expanded(
+                              child: ListView.builder(
+                                itemCount: bidListings.length,
+                                itemBuilder: (context, index) {
+                                  final listing = bidListings[index];
+                                  return ListTile(
+                                    shape: const Border(
+                                        bottom: BorderSide(color: Colors.grey)),
+                                    subtitle: AutoSizeText(
+                                          () {
+                                        final userBidHistory = bidDocs
+                                            .firstWhere(
+                                                (bid) =>
+                                            bid["listingId"]
+                                                .toString() ==
+                                                listing.id,
+                                            orElse: () =>
+                                            {"bidHistory": []})["bidHistory"]
+                                        as List<dynamic>;
+                                        final userBid =
+                                        userBidHistory.last["bidAmount"];
+                                        return "Your Bid: \$$userBid "
+                                            "Current Highest Bid: \$${(listing.currentHighestBid ?? listing.startingBid ?? listing.price).toStringAsFixed(2)} | "
+                                            "End Date: ${listing.bidEndTime}";
+                                      }(),
+                                    ),
+                                    leading: listing.image.isNotEmpty
+                                        ? _isLoadingImages
+                                        ? const SizedBox(
+                                      width: 50,
+                                      height: 50,
+                                      child: Center(
+                                          child:
+                                          CircularProgressIndicator()),
+                                    )
+                                        : (_imageCache[listing.id]?.isNotEmpty ??
+                                        false)
+                                        ? Image.memory(
+                                      _imageCache[listing.id]![0]!,
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                    )
+                                        : const Icon(Icons.error, size: 50)
+                                        : const Icon(Icons.image, size: 50),
+                                    title: AutoSizeText(listing.title),
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              ListingDetailsScreen(
+                                                listingItem: listing,
+                                                // Pass all cached images if available.
+                                                _imageCache[listing.id] ??
+                                                    const [],
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
                               ),
-                            );
-                          },
+                            ),
+                          ],
                         );
                       },
                     );

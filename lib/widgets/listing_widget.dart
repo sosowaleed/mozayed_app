@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:mozayed_app/models/listing_model.dart';
 import 'package:mozayed_app/screens/listing_details_screen.dart';
+import 'dart:typed_data';
 
 class ListingWidget extends StatefulWidget {
   final ListingItem listingItem;
@@ -12,13 +14,26 @@ class ListingWidget extends StatefulWidget {
 }
 
 class _ListingWidgetState extends State<ListingWidget> {
+  List<Uint8List?> _imageBytesCache = [];
   late ListingItem listingItem;
   int _currentImageIndex = 0;
+  bool _isLoadingImages = true;
 
   @override
   void initState() {
     super.initState();
     listingItem = widget.listingItem;
+    _preloadImages();
+  }
+
+  // Preload all image bytes and store in the cache.
+  Future<void> _preloadImages() async {
+    final futures =
+        listingItem.image.map((url) => _getImageBytes(url)).toList();
+    _imageBytesCache = await Future.wait(futures);
+    setState(() {
+      _isLoadingImages = false;
+    });
   }
 
   bool isPhone(BuildContext context) {
@@ -41,6 +56,16 @@ class _ListingWidgetState extends State<ListingWidget> {
     });
   }
 
+  // Helper function to get image bytes from Firebase Storage
+  Future<Uint8List?> _getImageBytes(String imageUrl) async {
+    try {
+      final ref = FirebaseStorage.instance.refFromURL(imageUrl);
+      return await ref.getData();
+    } catch (e) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isPhoneLayout = isPhone(context);
@@ -51,7 +76,7 @@ class _ListingWidgetState extends State<ListingWidget> {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) =>
-                ListingDetailsScreen(listingItem: listingItem),
+                ListingDetailsScreen(listingItem: listingItem, _imageBytesCache),
           ),
         );
       },
@@ -70,12 +95,16 @@ class _ListingWidgetState extends State<ListingWidget> {
                       const BorderRadius.vertical(top: Radius.circular(10)),
                   child: Hero(
                     tag: listingItem.id,
-                    child: Image.network(
-                      listingItem.image[_currentImageIndex],
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
-                    ),
+                    child: _isLoadingImages
+                        ? const Center(child: CircularProgressIndicator())
+                        : _imageBytesCache[_currentImageIndex] == null
+                            ? const Center(child: Icon(Icons.error))
+                            : Image.memory(
+                                _imageBytesCache[_currentImageIndex]!,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                              ),
                   ),
                 ),
                 if (!isPhoneLayout)
@@ -166,8 +195,7 @@ class _ListingWidgetState extends State<ListingWidget> {
                           TextSpan(
                             children: [
                               TextSpan(
-                                text:
-                                    listingItem.price.toStringAsFixed(2),
+                                text: listingItem.price.toStringAsFixed(2),
                                 style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,

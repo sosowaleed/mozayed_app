@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -8,10 +9,12 @@ import 'package:mozayed_app/providers/cart_provider.dart';
 import 'package:mozayed_app/providers/listing_provider.dart';
 import 'package:mozayed_app/providers/user_and_auth_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:typed_data';
 
 class ListingDetailsScreen extends ConsumerStatefulWidget {
   final ListingItem listingItem;
-  const ListingDetailsScreen({super.key, required this.listingItem});
+  final List<Uint8List?> _imageBytesCache;
+  const ListingDetailsScreen(this._imageBytesCache, {super.key, required this.listingItem});
 
   @override
   ConsumerState<ListingDetailsScreen> createState() =>
@@ -39,6 +42,29 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
     "Item": ["Condition worse than advertised", "Item sold was different", "Other"],
     "Bid": ["Illegitimate bid", "Not responding", "Other"],
   };
+  // Local cache for image bytes.
+  List<Uint8List?> _localCache = [];
+  bool _isLocalCacheLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // If the cache passed from the ListingWidget is not empty, use it.
+    if (widget._imageBytesCache.isNotEmpty) {
+      _localCache = widget._imageBytesCache;
+      _isLocalCacheLoading = false;
+    } else {
+      _prefetchImages();
+    }
+  }
+
+  Future<void> _prefetchImages() async {
+    final futures = widget.listingItem.image.map((url) => _getImageBytes(url)).toList();
+    _localCache = await Future.wait(futures);
+    setState(() {
+      _isLocalCacheLoading = false;
+    });
+  }
 
   void _previousImage() {
     setState(() {
@@ -58,6 +84,16 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
         _currentImageIndex = 0;
       }
     });
+  }
+
+  // Helper function to get image bytes from Firebase Storage
+  Future<Uint8List?> _getImageBytes(String imageUrl) async {
+    try {
+      final ref = FirebaseStorage.instance.refFromURL(imageUrl);
+      return await ref.getData();
+    } catch (e) {
+      return null;
+    }
   }
 
   void _handleBuy() {
@@ -341,11 +377,16 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    listing.image[_currentImageIndex],
+                  child: _isLocalCacheLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _localCache[_currentImageIndex] != null
+                      ? Image.memory(
+                    _localCache[_currentImageIndex]!,
                     fit: BoxFit.cover,
                     width: double.infinity,
-                  ),
+                    height: double.infinity,
+                  )
+                      : const Center(child: Icon(Icons.error)),
                 ),
                 // Left Arrow.
                 Positioned(
