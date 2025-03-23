@@ -12,7 +12,8 @@ enum LocationScope { everywhere, city, country }
 
 
 class HomeContent extends ConsumerStatefulWidget {
-  const HomeContent({super.key});
+  final bool adminInfo;
+  const HomeContent({super.key, this.adminInfo = false});
 
   @override
   ConsumerState<HomeContent> createState() => _HomeContentState();
@@ -175,253 +176,262 @@ class _HomeContentState extends ConsumerState<HomeContent> {
               crossAxisCount = 3;
             }
 
-            return Column(
-              children: [
-                // Filter Toggle Button with arrow icon.
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                  child: Row(
-                    children: [
-                      TextButton.icon(
-                        style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,),
-                        onPressed: () {
-                          setState(() {
-                            _showFilters = !_showFilters;
-                          });
-                        },
-                        icon: AnimatedRotation(
-                          turns: _showFilters ? 0.5 : 0.0,
-                          duration: const Duration(milliseconds: 300),
-                          child: const Icon(Icons.arrow_drop_down),
+            return RefreshIndicator(
+              onRefresh: () async {
+                // Refresh the listings provider.
+                ref.refresh(listingsProvider);
+                // Optionally wait a moment to show the indicator.
+                await Future.delayed(const Duration(seconds: 1));
+              },
+              child: Column(
+                children: [
+                  // Filter Toggle Button with arrow icon.
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                    child: Row(
+                      children: [
+                        TextButton.icon(
+                          style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,),
+                          onPressed: () {
+                            setState(() {
+                              _showFilters = !_showFilters;
+                            });
+                          },
+                          icon: AnimatedRotation(
+                            turns: _showFilters ? 0.5 : 0.0,
+                            duration: const Duration(milliseconds: 300),
+                            child: const Icon(Icons.arrow_drop_down),
+                          ),
+                          label: Text(
+                              "Filters",
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),),
                         ),
-                        label: Text(
-                            "Filters",
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                // Expandable Filter Bar.
-                if (_showFilters)
-                  Card(
-                    margin: const EdgeInsets.all(8.0),
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    elevation: 3,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              // Condition Dropdown.
-                              Expanded(
-                                child: DropdownButtonFormField<String>(
-                                  decoration:  InputDecoration(
-                                    fillColor: Theme.of(context).colorScheme.onInverseSurface,
-                                    filled: true,
-                                    labelText: "Condition",
-                                  ),
-                                  value: _selectedCondition,
-                                  items: _conditionOptions
-                                      .map((condition) => DropdownMenuItem<String>(
-                                    value: condition,
-                                    child: Text(condition),
-                                  ))
-                                      .toList(),
-                                  onChanged: (val) {
-                                    setState(() {
-                                      _selectedCondition = val!;
-                                    });
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              // Sale Type Dropdown.
-                              Expanded(
-                                child: DropdownButtonFormField<String>(
-                                  decoration:  InputDecoration(
-                                    fillColor: Theme.of(context).colorScheme.onInverseSurface,
-                                    filled: true,
-                                    labelText: "Sale Type",
-                                  ),
-                                  value: _selectedSaleType,
-                                  items: _saleTypeOptions
-                                      .map((saleType) => DropdownMenuItem<String>(
-                                    value: saleType,
-                                    child: Text(saleType),
-                                  ))
-                                      .toList(),
-                                  onChanged: (val) {
-                                    setState(() {
-                                      _selectedSaleType = val!;
-                                    });
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              // Category Dropdown.
-                              Expanded(
-                                child: DropdownButtonFormField<String>(
-                                  decoration: InputDecoration(
-                                    fillColor: Theme.of(context).colorScheme.onInverseSurface,
-                                    filled: true,
-                                    labelText: "Category",
-                                  ),
-                                  value: _selectedCategory,
-                                  items: _categoryOptions
-                                      .map((category) => DropdownMenuItem<String>(
-                                    value: category,
-                                    child: Text(category),
-                                  ))
-                                      .toList(),
-                                  onChanged: (val) {
-                                    setState(() {
-                                      _selectedCategory = val!;
-                                    });
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              // Price Filter.
-                              Expanded(
-                                child: TextFormField(
-                                  decoration: InputDecoration(
-                                    fillColor: Theme.of(context).colorScheme.onInverseSurface,
-                                    filled: true,
-                                    labelText: "Max Price",
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  onChanged: (val) {
-                                    _maxPriceText = val;
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              // Max Distance Filter (km).
-                              Expanded(
-                                child: TextFormField(
-                                  decoration: InputDecoration(
-                                    fillColor: Theme.of(context).colorScheme.onInverseSurface,
-                                    filled: true,
-                                    labelText: "Max Distance (km)",
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  onChanged: (val) {
-                                    _maxDistanceText = val;
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              // Location Scope Radio Buttons.
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                     AutoSizeText("Location Scope:", style: TextStyle(color: Theme.of(context).colorScheme.onSurface),),
-                                    RadioListTile<LocationScope>(
-                                      title:  AutoSizeText("Everywhere", style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-                                      value: LocationScope.everywhere,
-                                      groupValue: _selectedLocationScope,
-                                      dense: true,
-                                       contentPadding: EdgeInsets.zero,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _selectedLocationScope = value!;
-                                        });
-                                      },
+                  // Expandable Filter Bar.
+                  if (_showFilters)
+                    Card(
+                      margin: const EdgeInsets.all(8.0),
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      elevation: 3,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                // Condition Dropdown.
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    decoration:  InputDecoration(
+                                      fillColor: Theme.of(context).colorScheme.onInverseSurface,
+                                      filled: true,
+                                      labelText: "Condition",
                                     ),
-                                    RadioListTile<LocationScope>(
-                                      title:  AutoSizeText("City",style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-                                      value: LocationScope.city,
-                                      groupValue: _selectedLocationScope,
-                                      dense: true,
-                                      contentPadding: EdgeInsets.zero,
-                                      onChanged: (value) {
-                                        setState((){
-                                          _selectedLocationScope=value!;
-                                        });
-                                      },
-                                    ),
-                                    RadioListTile<LocationScope>(
-                                      title: const AutoSizeText("Country"),
-                                      value: LocationScope.country,
-                                      groupValue: _selectedLocationScope,
-                                      dense: true,
-                                      contentPadding: EdgeInsets.zero,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _selectedLocationScope = value!;
-                                        });
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Column(
-                                children: [
-                                  const SizedBox(width: 12),
-                                  ElevatedButton(
-                                    onPressed: () => _applyFilter(allListings),
-                                    child: const Text("Filter"),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  ElevatedButton(
-                                    onPressed: () {
+                                    value: _selectedCondition,
+                                    items: _conditionOptions
+                                        .map((condition) => DropdownMenuItem<String>(
+                                      value: condition,
+                                      child: Text(condition),
+                                    ))
+                                        .toList(),
+                                    onChanged: (val) {
                                       setState(() {
-                                        // Reset filter parameters back to their defaults.
-                                        _selectedCondition = "Any";
-                                        _selectedSaleType = "Any";
-                                        _selectedCategory = "Any";
-                                        _maxPriceText = "";
-                                        _maxDistanceText = "";
-                                        _selectedLocationScope = LocationScope.everywhere;
-                                        _filterApplied = false;
-                                        // Reset filtered listings to the full list.
-                                        _filteredListings = List.from(allListings);
+                                        _selectedCondition = val!;
                                       });
                                     },
-                                    child: const Text("Reset"),
                                   ),
-                                ],
-                              )
-                            ],
-                          ),
-                        ],
+                                ),
+                                const SizedBox(width: 12),
+                                // Sale Type Dropdown.
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    decoration:  InputDecoration(
+                                      fillColor: Theme.of(context).colorScheme.onInverseSurface,
+                                      filled: true,
+                                      labelText: "Sale Type",
+                                    ),
+                                    value: _selectedSaleType,
+                                    items: _saleTypeOptions
+                                        .map((saleType) => DropdownMenuItem<String>(
+                                      value: saleType,
+                                      child: Text(saleType),
+                                    ))
+                                        .toList(),
+                                    onChanged: (val) {
+                                      setState(() {
+                                        _selectedSaleType = val!;
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                // Category Dropdown.
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    decoration: InputDecoration(
+                                      fillColor: Theme.of(context).colorScheme.onInverseSurface,
+                                      filled: true,
+                                      labelText: "Category",
+                                    ),
+                                    value: _selectedCategory,
+                                    items: _categoryOptions
+                                        .map((category) => DropdownMenuItem<String>(
+                                      value: category,
+                                      child: Text(category),
+                                    ))
+                                        .toList(),
+                                    onChanged: (val) {
+                                      setState(() {
+                                        _selectedCategory = val!;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Price Filter.
+                                Expanded(
+                                  child: TextFormField(
+                                    decoration: InputDecoration(
+                                      fillColor: Theme.of(context).colorScheme.onInverseSurface,
+                                      filled: true,
+                                      labelText: "Max Price",
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    onChanged: (val) {
+                                      _maxPriceText = val;
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                // Max Distance Filter (km).
+                                Expanded(
+                                  child: TextFormField(
+                                    decoration: InputDecoration(
+                                      fillColor: Theme.of(context).colorScheme.onInverseSurface,
+                                      filled: true,
+                                      labelText: "Max Distance (km)",
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    onChanged: (val) {
+                                      _maxDistanceText = val;
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Location Scope Radio Buttons.
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                       AutoSizeText("Location Scope:", style: TextStyle(color: Theme.of(context).colorScheme.onSurface),),
+                                      RadioListTile<LocationScope>(
+                                        title:  AutoSizeText("Everywhere", style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                                        value: LocationScope.everywhere,
+                                        groupValue: _selectedLocationScope,
+                                        dense: true,
+                                         contentPadding: EdgeInsets.zero,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _selectedLocationScope = value!;
+                                          });
+                                        },
+                                      ),
+                                      RadioListTile<LocationScope>(
+                                        title:  AutoSizeText("City",style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                                        value: LocationScope.city,
+                                        groupValue: _selectedLocationScope,
+                                        dense: true,
+                                        contentPadding: EdgeInsets.zero,
+                                        onChanged: (value) {
+                                          setState((){
+                                            _selectedLocationScope=value!;
+                                          });
+                                        },
+                                      ),
+                                      RadioListTile<LocationScope>(
+                                        title: const AutoSizeText("Country"),
+                                        value: LocationScope.country,
+                                        groupValue: _selectedLocationScope,
+                                        dense: true,
+                                        contentPadding: EdgeInsets.zero,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _selectedLocationScope = value!;
+                                          });
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  children: [
+                                    const SizedBox(width: 12),
+                                    ElevatedButton(
+                                      onPressed: () => _applyFilter(allListings),
+                                      child: const Text("Filter"),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          // Reset filter parameters back to their defaults.
+                                          _selectedCondition = "Any";
+                                          _selectedSaleType = "Any";
+                                          _selectedCategory = "Any";
+                                          _maxPriceText = "";
+                                          _maxDistanceText = "";
+                                          _selectedLocationScope = LocationScope.everywhere;
+                                          _filterApplied = false;
+                                          // Reset filtered listings to the full list.
+                                          _filteredListings = List.from(allListings);
+                                        });
+                                      },
+                                      child: const Text("Reset"),
+                                    ),
+                                  ],
+                                )
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  // Listings Grid or Empty Message.
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: _filteredListings.isEmpty
+                          ? const Center(child: Text("No listings available"))
+                          : GridView.builder(
+                        key: UniqueKey(),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                        ),
+                        itemCount: _filteredListings.length,
+                        itemBuilder: (context, index) {
+                          return ListingWidget(
+                            key: ValueKey(_filteredListings[index].id),
+                            listingItem: _filteredListings[index],
+                            adminInfo: widget.adminInfo,
+                          );
+                        },
                       ),
                     ),
                   ),
-                // Listings Grid or Empty Message.
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: _filteredListings.isEmpty
-                        ? const Center(child: Text("No listings available"))
-                        : GridView.builder(
-                      key: UniqueKey(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossAxisCount,
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                      ),
-                      itemCount: _filteredListings.length,
-                      itemBuilder: (context, index) {
-                        return ListingWidget(
-                          key: ValueKey(_filteredListings[index].id),
-                          listingItem: _filteredListings[index],
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             );
           },
         );

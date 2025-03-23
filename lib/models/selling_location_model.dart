@@ -36,4 +36,15 @@ class SellingLocation {
       zip: map['zip'],
     );
   }
+
+  @override
+  String toString() {
+    return 'SellingLocation('
+        'lat: $lat, '
+        'lng: $lng, '
+        'address: $address, '
+        'city: $city, '
+        'zip: $zip'
+        ')';
+  }
 }

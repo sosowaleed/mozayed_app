@@ -14,7 +14,8 @@ import 'dart:typed_data';
 class ListingDetailsScreen extends ConsumerStatefulWidget {
   final ListingItem listingItem;
   final List<Uint8List?> _imageBytesCache;
-  const ListingDetailsScreen(this._imageBytesCache, {super.key, required this.listingItem});
+  final bool adminInfo;
+  const ListingDetailsScreen(this._imageBytesCache, {super.key, required this.listingItem, this.adminInfo = false});
 
   @override
   ConsumerState<ListingDetailsScreen> createState() =>
@@ -487,9 +488,10 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                       ),
                     ),
                   ),
-                  // New: Bidders List Section (only for bid listings)
+                  // Bidders List Section (only for bid listings)
 
                   if (listing.saleType == SaleType.bid) ...[
+                    const SizedBox(height: 8),
 
                     Text(
                       "Bidders (Highest to Lowest):",
@@ -504,16 +506,21 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                         itemCount: sortedBidHistory.length,
                         itemBuilder: (context, index) {
                           final bidEntry = sortedBidHistory[index];
-                          return ListTile(
-                            dense: true,
-                            leading: const Icon(Icons.account_circle),
-                            title: Text(
-                              "Bid: SAR ${(bidEntry['bidAmount'] as num).toStringAsFixed(2)}",
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                            subtitle: Text(
-                              "Time: ${bidEntry['bidTime']}",
-                              style: const TextStyle(fontSize: 12),
+                          // Check if this bid belongs to the current user.
+                          final bool isCurrentUserBid = bidEntry['bidderId'] == user.id;
+                          return Container(
+                            color: isCurrentUserBid ? theme.colorScheme.secondary.withOpacity(0.2) : null,
+                            child: ListTile(
+                              dense: true,
+                              leading: const Icon(Icons.account_circle),
+                              title: Text(
+                                "Bid: SAR ${(bidEntry['bidAmount'] as num).toStringAsFixed(2)}",
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                              subtitle: Text(
+                                "Time: ${bidEntry['bidTime']}",
+                                style: const TextStyle(fontSize: 12),
+                              ),
                             ),
                           );
                         },
@@ -526,10 +533,51 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
           ),
           const SizedBox(height: 5),
           // Bid/Buy Button Area.
+          // Replace the Bid/Buy Button Area with the following snippet:
+
           Container(
             color: theme.scaffoldBackgroundColor,
             padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-            child: listing.saleType == SaleType.bid
+            child: widget.adminInfo
+                ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Admin Details",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Listing ID: ${listing.id}",
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Owner: ${listing.ownerName}",
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Owner ID: ${listing.ownerId}",
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Listing Location: ${listing.location.toString()}",
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Sale Mode: ${listing.saleType == SaleType.bid ? "Bid" : "Buy Now"}",
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ],
+            )
+                : listing.saleType == SaleType.bid
                 ? Column(
               children: [
                 Text(

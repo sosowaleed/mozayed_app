@@ -15,10 +15,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EditListingScreen extends ConsumerStatefulWidget {
   final ListingItem listing;
+  final bool adminInfo;
 
   const EditListingScreen({
     super.key,
     required this.listing,
+    this.adminInfo = false,
   });
 
   @override
@@ -104,6 +106,67 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       return null;
     }
   }
+
+  // Helper function to delete the listing.
+  Future<void> _deleteListing() async {
+    // Confirm deletion with the user.
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Listing"),
+        content: const Text("Are you sure you want to delete this listing? This action cannot be undone."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      // Reference the container of images.
+      final containerRef = FirebaseStorage.instance
+          .ref()
+          .child("listing_images")
+          .child(widget.listing.id);
+
+      // List all files in this folder.
+      final listResult = await containerRef.listAll();
+      // Delete each file.
+      for (var fileRef in listResult.items) {
+        await fileRef.delete();
+        log("Deleted file: ${fileRef.fullPath}");
+      }
+
+      // Delete the listing document from Firestore.
+      await FirebaseFirestore.instance
+          .collection("listings")
+          .doc(widget.listing.id)
+          .delete();
+
+      // Optionally show a snackbar and navigate away.
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Listing deleted successfully"))
+        );
+        Navigator.of(context).pop(); // Return from edit screen.
+      }
+    } catch (e) {
+      log("Error deleting listing: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Error deleting listing"))
+      );
+    }
+  }
+
   // Uploading images to Firebase Storage
   Future<String> uploadImage(
       File imageFile, String listingId, int index) async {
@@ -656,9 +719,21 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: _saveListing,
-                  child: const Text("Save Changes"),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      onPressed: _saveListing,
+                      child: const Text("Save Changes"),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red[400],
+                      ),
+                      onPressed: _deleteListing,
+                      child: const Text("Delete Listing"),
+                    ),
+                  ],
                 ),
               ],
             ),

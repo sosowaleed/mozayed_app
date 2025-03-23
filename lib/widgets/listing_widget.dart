@@ -7,7 +7,8 @@ import 'dart:typed_data';
 
 class ListingWidget extends StatefulWidget {
   final ListingItem listingItem;
-  const ListingWidget({super.key, required this.listingItem});
+  final bool adminInfo;
+  const ListingWidget({super.key, required this.listingItem, this.adminInfo = false});
 
   @override
   State<ListingWidget> createState() => _ListingWidgetState();
@@ -76,7 +77,7 @@ class _ListingWidgetState extends State<ListingWidget> {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) =>
-                ListingDetailsScreen(listingItem: listingItem, _imageBytesCache),
+                ListingDetailsScreen(listingItem: listingItem, _imageBytesCache, adminInfo: widget.adminInfo,),
           ),
         );
       },

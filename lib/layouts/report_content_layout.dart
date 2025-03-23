@@ -92,115 +92,123 @@ class _ReportHomeContentState extends ConsumerState<ReportContent> {
           crossAxisCount = 3;
         }
 
-        return Column(
-          children: [
-            // Show/hide filter options button.
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: ElevatedButton.icon(
-                icon: Icon(_filterVisible ? Icons.arrow_drop_up : Icons.arrow_drop_down),
-                label: const Text("Filter options"),
-                onPressed: () {
-                  setState(() {
-                    _filterVisible = !_filterVisible;
-                  });
-                },
-              ),
-            ),
-            // Filter options shown only when _filterVisible is true.
-            if (_filterVisible)
-              Card(
-                margin: const EdgeInsets.all(8.0),
-                elevation: 3,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          // Category Dropdown.
-                          Expanded(
-                            child: DropdownButtonFormField<ReportCategoryFilter>(
-                              decoration: const InputDecoration(labelText: "Category"),
-                              value: _selectedCategoryFilter,
-                              items: ReportCategoryFilter.values
-                                  .map((cat) => DropdownMenuItem(
-                                value: cat,
-                                child: Text(cat == ReportCategoryFilter.all
-                                    ? "All"
-                                    : cat.name.toUpperCase()),
-                              ))
-                                  .toList(),
-                              onChanged: (val) {
-                                _selectedCategoryFilter = val!;
-                                _selectedFlagFilter = "All";
-                                _applyFilter(allReports);
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          // Flag Dropdown.
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              decoration: const InputDecoration(labelText: "Flag"),
-                              value: _selectedFlagFilter,
-                              items: flagOptions[_selectedCategoryFilter]!
-                                  .map((flag) => DropdownMenuItem(
-                                value: flag,
-                                child: Text(flag),
-                              ))
-                                  .toList(),
-                              onChanged: (val) {
-                                _selectedFlagFilter = val!;
-                                _applyFilter(allReports);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      // Switch for handled reports.
-                      SwitchListTile(
-                        title: const Text("Exclude handled reports"),
-                        value: _excludeHandled,
-                        onChanged: (newVal) {
-                          setState(() {
-                            _excludeHandled = newVal;
-                            _applyFilter(allReports);
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton(
-                        onPressed: () => _applyFilter(allReports),
-                        child: const Text("Apply Filter"),
-                      ),
-                    ],
-                  ),
+        return RefreshIndicator(
+          onRefresh: () async {
+            // Refresh the reports provider.
+            ref.refresh(reportsProvider);
+            // Optionally wait a moment to show the indicator.
+            await Future.delayed(const Duration(seconds: 1));
+          },
+          child: Column(
+            children: [
+              // Show/hide filter options button.
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: ElevatedButton.icon(
+                  icon: Icon(_filterVisible ? Icons.arrow_drop_up : Icons.arrow_drop_down),
+                  label: const Text("Filter options"),
+                  onPressed: () {
+                    setState(() {
+                      _filterVisible = !_filterVisible;
+                    });
+                  },
                 ),
               ),
-            // Reports Grid.
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: _filteredReports.isEmpty
-                    ? const Center(child: Text("No reports available"))
-                    : GridView.builder(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
+              // Filter options shown only when _filterVisible is true.
+              if (_filterVisible)
+                Card(
+                  margin: const EdgeInsets.all(8.0),
+                  elevation: 3,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            // Category Dropdown.
+                            Expanded(
+                              child: DropdownButtonFormField<ReportCategoryFilter>(
+                                decoration: const InputDecoration(labelText: "Category"),
+                                value: _selectedCategoryFilter,
+                                items: ReportCategoryFilter.values
+                                    .map((cat) => DropdownMenuItem(
+                                  value: cat,
+                                  child: Text(cat == ReportCategoryFilter.all
+                                      ? "All"
+                                      : cat.name.toUpperCase()),
+                                ))
+                                    .toList(),
+                                onChanged: (val) {
+                                  _selectedCategoryFilter = val!;
+                                  _selectedFlagFilter = "All";
+                                  _applyFilter(allReports);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Flag Dropdown.
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                decoration: const InputDecoration(labelText: "Flag"),
+                                value: _selectedFlagFilter,
+                                items: flagOptions[_selectedCategoryFilter]!
+                                    .map((flag) => DropdownMenuItem(
+                                  value: flag,
+                                  child: Text(flag),
+                                ))
+                                    .toList(),
+                                onChanged: (val) {
+                                  _selectedFlagFilter = val!;
+                                  _applyFilter(allReports);
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                        itemCount: _filteredReports.length,
-                        itemBuilder: (context, index) {
-                          return ReportWidget(
-                            report: _filteredReports[index],
-                            currentAdmin: currentAdmin,
-                          );
-                        },
-                      ),
+                        // Switch for handled reports.
+                        SwitchListTile(
+                          title: const Text("Exclude handled reports"),
+                          value: _excludeHandled,
+                          onChanged: (newVal) {
+                            setState(() {
+                              _excludeHandled = newVal;
+                              _applyFilter(allReports);
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: () => _applyFilter(allReports),
+                          child: const Text("Apply Filter"),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              // Reports Grid.
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: _filteredReports.isEmpty
+                      ? const Center(child: Text("No reports available"))
+                      : GridView.builder(
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossAxisCount,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                          ),
+                          itemCount: _filteredReports.length,
+                          itemBuilder: (context, index) {
+                            return ReportWidget(
+                              report: _filteredReports[index],
+                              currentAdmin: currentAdmin,
+                            );
+                          },
+                        ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );

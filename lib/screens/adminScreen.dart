@@ -25,7 +25,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     {
       'title': 'Monitor Screen',
       'icon': Icons.monitor_heart,
-      'screen': const HomeContent(),
+      'screen': const HomeContent(adminInfo: true,),
     },
     {
       'title': 'Users',
