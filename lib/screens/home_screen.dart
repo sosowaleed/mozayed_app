@@ -178,15 +178,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return FutureBuilder<bool?>(
           future: _isActivated(),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+
             if (snapshot.hasError) {
               return Center(child: Text("Error: ${snapshot.error}"));
             }
-            final isActivated = snapshot.data ?? false;
-            if (!isActivated) {
-              return const AccountNotActivatedScreen();
+            final isActivated = snapshot.data;
+            if (isActivated != null) {
+              if (!isActivated) {
+                return const AccountNotActivatedScreen();
+              }
             }
 
             return LayoutBuilder(
