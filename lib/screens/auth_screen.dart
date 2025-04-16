@@ -142,70 +142,6 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  /// Loads the Google Map API key from the asset file.
-  /// The file must contain a line in the format: "api key: YOUR_API_KEY"
-  Future<String> loadGoogleMapApiKey() async {
-    // Load the asset file as a string.
-    final fileContent = await rootBundle.loadString('lib/assets/google map api key');
-
-    // Look for the line that starts with "api key:" (case insensitive)
-    final apiKeyLine = fileContent.split('\n').firstWhere(
-          (line) => line.toLowerCase().trim().startsWith('api key:'),
-      orElse: () => '',
-    );
-
-    // Extract the API key by removing the label "api key:" and trimming whitespace.
-    final apiKey = apiKeyLine.replaceFirst(RegExp(r'api key:', caseSensitive: false), '').trim();
-
-    return apiKey;
-  }
-
-  Future<void> _getCurrentLocationGoogleMaps() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return;
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.deniedForever) {
-        return;
-      }
-    }
-
-    setState(() {
-      _isGettingLocation = true;
-    });
-
-    Position position = await Geolocator.getCurrentPosition();
-    //for Google maps implementation
-    final lat = position.latitude;
-    final lng = position.longitude;
-
-    final apiKey = await loadGoogleMapApiKey();
-
-    final url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey'); //need api key!
-    final response = await http.get(url);
-    final resData = json.decode(response.body);
-    print(resData);
-    _userModel["location"] = {
-      "lat": lat,
-      "lng": lng,
-      "address": resData['results'][0]['formatted_address'],
-      "city": resData['results'][0]['address_components'][5]['long_name'],
-      "zip": resData['results'][0]['address_components'][7]['long_name'],
-      "country": resData['results'][0]['address_components'][6]['long_name'],
-    };
-    setState(() {
-      _address = _userModel["location"]["address"];
-    });
-  }
-
   Future<void> _getCurrentLocation() async {
     bool serviceEnabled;
     LocationPermission permission;
@@ -267,31 +203,48 @@ class _AuthScreenState extends State<AuthScreen> {
     if (position == null) {
       return;
     }
+    setState(() {
+      _isGettingLocation = true;
+    });
     //for Google maps implementation
     final lat = position.latitude;
     final lng = position.longitude;
+    if (!mounted) {
+      return;
+    }
+    if (kIsWeb) {
+      Map<String, dynamic> address = await _getAddressFromLatLngWeb(
+        lat: lat,
+        lng: lng,
+        lang: Localizations.localeOf(context),
+      );
 
-    final apiKey = await loadGoogleMapApiKey();
+      if(address["display_name"] != "address not found") {
+        _userModel["location"] = {
+          "lat": lat,
+          "lng": lng,
+          "address": address["display_name"],
+          "city": address["address"]["city"],
+          "zip": address["address"]["postcode"],
+          "country": address["address"]["country"],
+        };
+      }
 
-    final url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey'); //need api key!
-    final response = await http.get(url);
-    final resData = json.decode(response.body);
-    _userModel["location"] = {
-      "lat": lat,
-      "lng": lng,
-      "address": resData['results'][0]['formatted_address'],
-      "city": resData['results'][0]['address_components'][5]['long_name'],
-      "zip": resData['results'][0]['address_components'][7]['long_name'],
-      "country": resData['results'][0]['address_components'][6]['long_name'],
-    };
-    setState(() {
-      _address = _userModel["location"]["address"];
-    });
-
+      setState(() {
+        _address = address["display_name"];
+        _isGettingLocation = false;
+      });
+    } else {
+      String address = await _getAddressFromLatLng(lat, lng);
+      setState(() {
+        _address =  address;
+        _isGettingLocation = false;
+      });
+    }
   }
 
-  Future<void> _loadMapPicker() async {
+  // Not needed.
+  /*Future<void> _loadMapPicker() async {
     List<double>? pickedLocation = await Navigator.of(context).push<List<double>>(
         MaterialPageRoute(builder: (ctx) => const StaticMapPickerScreen()
         ));
@@ -331,7 +284,7 @@ class _AuthScreenState extends State<AuthScreen> {
         _isGettingLocation = false;
       });
     }
-  }
+  }*/
 
   @override
   Widget build(BuildContext context) {
@@ -447,7 +400,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                   children: [
                                     TextButton.icon(
                                       icon: const Icon(Icons.location_on),
-                                      onPressed: _getCurrentLocationGoogleMaps,
+                                      onPressed: _getCurrentLocation,
                                       label: const AutoSizeText(
                                           "Get Current Location"),
                                     ),

@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mozayed_app/models/listing_model.dart';
 import 'package:mozayed_app/providers/listing_provider.dart';
-import 'package:mozayed_app/screens/static_flutter_map_screen.dart';
+import 'package:mozayed_app/screens/google_map_screen_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,8 +24,7 @@ class EditListingScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<EditListingScreen> createState() =>
-      _EditListingScreenState();
+  ConsumerState<EditListingScreen> createState() => _EditListingScreenState();
 }
 
 class _EditListingScreenState extends ConsumerState<EditListingScreen> {
@@ -89,7 +88,8 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
 
   // Prefetch all image bytes for the current listing.
   Future<void> _prefetchImages() async {
-    final futures = widget.listing.image.map((url) => _getImageBytes(url)).toList();
+    final futures =
+        widget.listing.image.map((url) => _getImageBytes(url)).toList();
     _localCache = await Future.wait(futures);
     setState(() {
       _isLocalCacheLoading = false;
@@ -114,7 +114,8 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Delete Listing"),
-        content: const Text("Are you sure you want to delete this listing? This action cannot be undone."),
+        content: const Text(
+            "Are you sure you want to delete this listing? This action cannot be undone."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -155,15 +156,13 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Listing deleted successfully"))
-        );
+            const SnackBar(content: Text("Listing deleted successfully")));
         Navigator.of(context).pop(); // Return from edit screen.
       }
     } catch (e) {
       log("Error deleting listing: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Error deleting listing"))
-      );
+          const SnackBar(content: Text("Error deleting listing")));
     }
   }
 
@@ -197,12 +196,18 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     }
   }
 
-  // TODO: replace with google maps implementation.
-  /// Opens the map picker (existing implementation) to select a location.
-  Future<void> _loadMapPicker() async {
-    List<double>? pickedLocation = await Navigator.of(context)
-        .push<List<double>>(
-            MaterialPageRoute(builder: (ctx) => const StaticMapPickerScreen()));
+  Future<void> _loadMapGooglePicker() async {
+    List<double>? pickedLocation =
+        await Navigator.of(context).push<List<double>>(MaterialPageRoute(
+            builder: (ctx) => GoogleMapScreen(
+                  latitude: widget.listing.location!.lat,
+                  longitude: widget.listing.location!.lng,
+                  ifLocationFetched: true,
+                )));
+
+    // If user pressed back don't do anything.
+    if (pickedLocation == null) return;
+
     setState(() {
       _isGettingLocation = true;
     });
@@ -405,14 +410,14 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                           if (!_isLocalCacheLoading)
                             ...List.generate(
                               (_listingData["image"] as List<String>).length,
-                                  (index) => Stack(
+                              (index) => Stack(
                                 fit: StackFit.expand,
                                 children: [
                                   _localCache[index] != null
                                       ? Image.memory(
-                                    _localCache[index]!,
-                                    fit: BoxFit.cover,
-                                  )
+                                          _localCache[index]!,
+                                          fit: BoxFit.cover,
+                                        )
                                       : const Center(child: Icon(Icons.error)),
                                   Positioned(
                                     top: 5,
@@ -424,7 +429,8 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                                         color: Colors.red,
                                       ),
                                       onPressed: () => _removeImage(
-                                          imageUrl: (_listingData["image"] as List<String>)[index],
+                                          imageUrl: (_listingData["image"]
+                                              as List<String>)[index],
                                           xFile: null),
                                     ),
                                   ),
@@ -432,28 +438,31 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                               ),
                             )
                           else
-                          // If not loaded yet, display a loading indicator for each image.
+                            // If not loaded yet, display a loading indicator for each image.
                             ...List.generate(
                               (_listingData["image"] as List<String>).length,
-                                  (index) => const Center(child: CircularProgressIndicator()),
+                              (index) => const Center(
+                                  child: CircularProgressIndicator()),
                             ),
                           // Newly picked images remain unchanged.
                           ..._pickedImages.map((xFile) => Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              Image.file(File(xFile.path), fit: BoxFit.cover),
-                              Positioned(
-                                top: 8,
-                                left: 0,
-                                right: 0,
-                                child: IconButton(
-                                  icon: const Icon(Icons.close, color: Colors.red),
-                                  onPressed: () => _removeImage(
-                                      imageUrl: null, xFile: xFile),
-                                ),
-                              ),
-                            ],
-                          )),
+                                fit: StackFit.expand,
+                                children: [
+                                  Image.file(File(xFile.path),
+                                      fit: BoxFit.cover),
+                                  Positioned(
+                                    top: 8,
+                                    left: 0,
+                                    right: 0,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.close,
+                                          color: Colors.red),
+                                      onPressed: () => _removeImage(
+                                          imageUrl: null, xFile: xFile),
+                                    ),
+                                  ),
+                                ],
+                              )),
                         ],
                       ),
                       // Previous arrow
@@ -623,7 +632,6 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                 const SizedBox(height: 12),
                 // Sale Type Toggle
 
-
                 if (_saleType == SaleType.bid) ...[
                   // Bid End Time Picker
                   ElevatedButton(
@@ -710,7 +718,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                   children: [
                     ElevatedButton.icon(
                       icon: const Icon(Icons.map),
-                      onPressed: _loadMapPicker,
+                      onPressed: _loadMapGooglePicker,
                       label: const Text("Select Location"),
                     ),
                     _isGettingLocation

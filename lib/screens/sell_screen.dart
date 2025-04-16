@@ -10,7 +10,7 @@ import 'package:mozayed_app/models/listing_model.dart';
 import 'package:mozayed_app/models/user_model.dart';
 import 'package:mozayed_app/providers/user_and_auth_provider.dart';
 import 'package:mozayed_app/providers/listing_provider.dart';
-import 'package:mozayed_app/screens/static_flutter_map_screen.dart';
+import 'package:mozayed_app/screens/google_map_screen_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
@@ -102,10 +102,10 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   }
 
   // Opens the map picker screen and fetches the selected location
-  Future<void> _loadMapPicker() async {
+  Future<void> _loadMapGooglePicker() async {
     List<double>? pickedLocation = await Navigator.of(context)
         .push<List<double>>(
-            MaterialPageRoute(builder: (ctx) => const StaticMapPickerScreen()));
+            MaterialPageRoute(builder: (ctx) => const GoogleMapScreen()));
     if (pickedLocation == null) return;
 
     _isGettingLocationNotifier.value = true; // Start loading state
@@ -654,7 +654,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                     children: [
                                       ElevatedButton.icon(
                                         icon: const Icon(Icons.map),
-                                        onPressed: _loadMapPicker,
+                                        onPressed: _loadMapGooglePicker,
                                         label: const Text("Select Location"),
                                       ),
                                       ValueListenableBuilder<bool>(

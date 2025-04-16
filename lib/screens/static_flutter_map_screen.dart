@@ -26,7 +26,7 @@ class _StaticMapPickerScreenState extends State<StaticMapPickerScreen> {
     } else {
       _pickedLocation = const LatLng(24.774265, 46.738586);
     }
-    //TODO: Remove comment in final demo release
+
     //_fetchInitialLocation();
   }
 
