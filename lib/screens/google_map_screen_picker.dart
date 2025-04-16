@@ -26,7 +26,6 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
   LatLng? _pickedLocation;
   CameraPosition? _cameraPosition;
   bool _locationFetched = false;
-  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -36,8 +35,7 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
         _pickedLocation = LatLng(widget.latitude, widget.longitude);
         _cameraPosition = CameraPosition(
           target: _pickedLocation!,
-          zoom: 16,
-        );
+          zoom: 16,);
         _locationFetched = true;
       });
       return;
@@ -94,50 +92,15 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
     });
   }
 
-  void _updateLocationFromSearch() {
-    final input = _searchController.text.trim();
-    if (input.isEmpty) return;
-
-    final parts = input.split(',');
-    if (parts.length != 2) return;
-
-    try {
-      final latitude = double.parse(parts[0]);
-      final longitude = double.parse(parts[1]);
-
-      setState(() {
-        _pickedLocation = LatLng(latitude, longitude);
-        _cameraPosition = CameraPosition(
-          target: _pickedLocation!,
-          zoom: 16,
-        );
-      });
-    } catch (_) {
-      // Handle invalid input gracefully
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: widget.isSelecting
-            ? TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Enter coordinates (lat, long)',
-                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.7)),
-                  border: InputBorder.none,
-                ),
-                style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
-                textInputAction: TextInputAction.search,
-                onSubmitted: (_) => _updateLocationFromSearch(),
-              )
-            : Text(
-                'Your Location',
-                style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
-              ),
+        title: Text(widget.isSelecting ? 'Pick your Location' : 'Your Location',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onPrimary,
+            )),
         backgroundColor: Theme.of(context).colorScheme.primary,
         actions: [
           if (widget.isSelecting)
@@ -161,9 +124,8 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
           });
         },
         initialCameraPosition: _cameraPosition!,
-        myLocationEnabled: true,
         myLocationButtonEnabled: true,
-
+        myLocationEnabled: true,
         markers: {
           Marker(
             markerId: const MarkerId('m1'),
