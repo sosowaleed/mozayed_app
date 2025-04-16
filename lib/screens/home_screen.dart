@@ -45,7 +45,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     },
   ];
 
-
   void _onMainItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -53,8 +52,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   // Build the profile popup menu button for the AppBar.
-  Widget _buildProfileMenuButton(BuildContext ctx, List<Map<String, dynamic>> profileMenuItems) {
-
+  Widget _buildProfileMenuButton(
+      BuildContext ctx, List<Map<String, dynamic>> profileMenuItems) {
     return PopupMenuButton<Map<String, dynamic>>(
       icon: const CircleAvatar(
         child: Icon(Icons.person),
@@ -80,6 +79,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<bool?> _isActivated() async {
     return await ref.read(userDataProvider.notifier).fetchActivated();
   }
+
   @override
   Widget build(BuildContext context) {
     // Profile menu items shown in the AppBar popup menu.
@@ -113,8 +113,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         'icon': Icons.history,
         'onTap': (context) {
           // Navigate to History Screen
-          Navigator.push(context,
-              MaterialPageRoute(builder: (context) => const UserHistoryScreen()));
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const UserHistoryScreen()));
         },
       },
       {
@@ -154,10 +156,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return Center(child: Text('Error: $error'));
       },
       data: (userMap) {
-
         if (userMap == null) {
-          return const Center(child: Text('Failed to fetch user data, please try again later.'));
-          }
+          return const Center(
+              child:
+              Text('Failed to fetch user data, please try again later.'));
+        }
         final UserModel userData = UserModel.fromMap(userMap);
         if (userData.admin) {
           profileMenuItems.add({
@@ -172,13 +175,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           });
         }
 
-
         return FutureBuilder<bool?>(
           future: _isActivated(),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
             if (snapshot.hasError) {
               return Center(child: Text("Error: ${snapshot.error}"));
             }
@@ -200,7 +199,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       _mainMenuItems[_selectedIndex]['title'] == 'Home'
                           ? 'Mozayed'
                           : _mainMenuItems[_selectedIndex]['title'],
-                      style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimary),
                     ),
                     actions: [
                       // Display the profile icon as a popup menu button
@@ -211,13 +211,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   // For larger screens, use a persistent drawer; for phones, use a bottom nav.
                   body: isPhone
-                      ? _mainMenuItems[_selectedIndex]['screen']
+                      ? snapshot.connectionState == ConnectionState.waiting
+                      ? const Center(child: CircularProgressIndicator())
+                      : _mainMenuItems[_selectedIndex]['screen']
                       : Row(
                     children: [
                       // Always-open drawer-like widget
                       Container(
                         width: 200,
-                        color: Theme.of(context).colorScheme.secondaryContainer,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .secondaryContainer,
                         child: ListView(
                           children: _mainMenuItems.map((item) {
                             final index = _mainMenuItems.indexOf(item);
@@ -228,7 +232,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               trailing: item['title'] == 'Cart'
                                   ? carData.isNotEmpty
                                   ? Container(
-                                padding: const EdgeInsets.all(4),
+                                padding:
+                                const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
                                   color: const Color.fromARGB(
                                       255, 237, 72, 72),
@@ -239,10 +244,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   '${carData.length}',
                                   style: const TextStyle(
                                       color: Color.fromARGB(
-                                          255,
-                                          231,
-                                          231,
-                                          231),
+                                          255, 231, 231, 231),
                                       fontSize: 12),
                                 ),
                               )
@@ -269,18 +271,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         icon: Stack(
                           children: [
                             Icon(item['icon']),
-                            if (item['title'] == 'Cart' && carData.isNotEmpty)
+                            if (item['title'] == 'Cart' &&
+                                carData.isNotEmpty)
                               Positioned(
                                 right: 0,
                                 child: CircleAvatar(
-                                  backgroundColor: const Color.fromARGB(
+                                  backgroundColor:
+                                  const Color.fromARGB(
                                       255, 237, 72, 72),
                                   radius: 8,
                                   child: Text(
                                     '${carData.length}',
                                     style: const TextStyle(
                                       fontSize: 10,
-                                      color: Color.fromARGB(255, 231, 231, 231),
+                                      color: Color.fromARGB(
+                                          255, 231, 231, 231),
                                     ),
                                   ),
                                 ),
@@ -304,6 +309,5 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         );
       },
     );
-
   }
 }

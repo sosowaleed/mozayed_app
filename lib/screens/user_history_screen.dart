@@ -36,7 +36,8 @@ class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
     await Future.wait(listings.map((listing) async {
       if (listing.image.isNotEmpty) {
         // Fetch every image for this listing.
-        final futures = listing.image.map((url) => _getImageBytes(url)).toList();
+        final futures =
+        listing.image.map((url) => _getImageBytes(url)).toList();
         _imageCache[listing.id] = await Future.wait(futures);
       } else {
         _imageCache[listing.id] = [];
@@ -84,8 +85,8 @@ class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
                 child: ordersAsync.when(
                   loading: () =>
                   const Center(child: CircularProgressIndicator()),
-                  error: (error, stack) =>
-                      Center(child: AutoSizeText("Error loading orders: $error")),
+                  error: (error, stack) => Center(
+                      child: AutoSizeText("Error loading orders: $error")),
                   data: (orders) {
                     // Flatten all purchased items from each order's "items" array.
                     final List<Map<String, dynamic>> purchasedOrders = [];
@@ -102,8 +103,9 @@ class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
                         }
                       }
                     }
-                    final purchasedIds =
-                    purchasedOrders.map((order) => order["listingId"]).toSet();
+                    final purchasedIds = purchasedOrders
+                        .map((order) => order["listingId"])
+                        .toSet();
                     final purchasedListings = allListings
                         .where((listing) => purchasedIds.contains(listing.id))
                         .toList();
@@ -112,8 +114,8 @@ class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
                     return bidsAsync.when(
                       loading: () =>
                       const Center(child: CircularProgressIndicator()),
-                      error: (error, stack) =>
-                          Center(child: AutoSizeText("Error loading bids: $error")),
+                      error: (error, stack) => Center(
+                          child: AutoSizeText("Error loading bids: $error")),
                       data: (bidDocs) {
                         final bidIds = bidDocs
                             .map<String>((bid) => bid["listingId"].toString())
@@ -140,13 +142,19 @@ class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
                         return Column(
                           children: [
                             // Purchases List.
-                            Expanded(
+                            purchasedListings.isEmpty
+                                ? const Expanded(
+                                child: Center(
+                                    child: Text("No Purchases yet",
+                                        style: TextStyle(fontSize: 20))))
+                                : Expanded(
                               child: ListView.builder(
                                 itemCount: purchasedListings.length,
                                 itemBuilder: (context, index) {
                                   final listing = purchasedListings[index];
-                                  final currentOrder = purchasedOrders.firstWhere(
-                                          (order) => order["listingId"] == listing.id);
+                                  final currentOrder =
+                                  purchasedOrders.firstWhere((order) =>
+                                  order["listingId"] == listing.id);
                                   return ListTile(
                                     shape: const Border(
                                       bottom: BorderSide(color: Colors.grey),
@@ -160,16 +168,19 @@ class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
                                           child:
                                           CircularProgressIndicator()),
                                     )
-                                        : (_imageCache[listing.id]?.isNotEmpty ??
+                                        : (_imageCache[listing.id]
+                                        ?.isNotEmpty ??
                                         false)
                                         ? Image.memory(
                                       // Show the first image.
-                                      _imageCache[listing.id]![0]!,
+                                      _imageCache[listing.id]![
+                                      0]!,
                                       width: 50,
                                       height: 50,
                                       fit: BoxFit.cover,
                                     )
-                                        : const Icon(Icons.error, size: 50)
+                                        : const Icon(Icons.error,
+                                        size: 50)
                                         : const Icon(Icons.image, size: 50),
                                     title: AutoSizeText(listing.title),
                                     subtitle: AutoSizeText(
@@ -182,8 +193,7 @@ class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
                                               ListingDetailsScreen(
                                                 listingItem: listing,
                                                 // Pass the full cached list; if not available, pass an empty list.
-                                                _imageCache[listing.id] ??
-                                                    const [],
+                                                _imageCache[listing.id] ?? const [],
                                               ),
                                         ),
                                       );
@@ -194,27 +204,42 @@ class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
                             ),
                             const Divider(thickness: 2),
                             // Bids List.
-                            Expanded(
+                            // Purchases Section.
+                            const Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: AutoSizeText(
+                                "Bids",
+                                style: TextStyle(fontSize: 20),
+                              ),
+                            ),
+                            bidListings.isEmpty
+                                ? const Expanded(
+                                child: Center(
+                                    child: Text("No bids yet",
+                                        style: TextStyle(fontSize: 20))))
+                                : Expanded(
                               child: ListView.builder(
                                 itemCount: bidListings.length,
                                 itemBuilder: (context, index) {
                                   final listing = bidListings[index];
                                   return ListTile(
                                     shape: const Border(
-                                        bottom: BorderSide(color: Colors.grey)),
+                                        bottom: BorderSide(
+                                            color: Colors.grey)),
                                     subtitle: AutoSizeText(
                                           () {
-                                        final userBidHistory = bidDocs
-                                            .firstWhere(
+                                        final userBidHistory =
+                                        bidDocs.firstWhere(
                                                 (bid) =>
                                             bid["listingId"]
                                                 .toString() ==
                                                 listing.id,
-                                            orElse: () =>
-                                            {"bidHistory": []})["bidHistory"]
+                                            orElse: () => {
+                                              "bidHistory": []
+                                            })["bidHistory"]
                                         as List<dynamic>;
-                                        final userBid =
-                                        userBidHistory.last["bidAmount"];
+                                        final userBid = userBidHistory
+                                            .last["bidAmount"];
                                         return "Your Bid: \$$userBid "
                                             "Current Highest Bid: \$${(listing.currentHighestBid ?? listing.startingBid ?? listing.price).toStringAsFixed(2)} | "
                                             "End Date: ${listing.bidEndTime}";
@@ -229,16 +254,20 @@ class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
                                           child:
                                           CircularProgressIndicator()),
                                     )
-                                        : (_imageCache[listing.id]?.isNotEmpty ??
+                                        : (_imageCache[listing.id]
+                                        ?.isNotEmpty ??
                                         false)
                                         ? Image.memory(
-                                      _imageCache[listing.id]![0]!,
+                                      _imageCache[
+                                      listing.id]![0]!,
                                       width: 50,
                                       height: 50,
                                       fit: BoxFit.cover,
                                     )
-                                        : const Icon(Icons.error, size: 50)
-                                        : const Icon(Icons.image, size: 50),
+                                        : const Icon(Icons.error,
+                                        size: 50)
+                                        : const Icon(Icons.image,
+                                        size: 50),
                                     title: AutoSizeText(listing.title),
                                     onTap: () {
                                       Navigator.push(

@@ -10,7 +10,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:mozayed_app/screens/google_map_screen_picker.dart';
 import 'dart:developer';
-
+import 'package:flutter/services.dart';
 import 'package:mozayed_app/screens/static_flutter_map_screen.dart';
 
 final _firebaseAuth = FirebaseAuth.instance;
@@ -142,6 +142,24 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  /// Loads the Google Map API key from the asset file.
+  /// The file must contain a line in the format: "api key: YOUR_API_KEY"
+  Future<String> loadGoogleMapApiKey() async {
+    // Load the asset file as a string.
+    final fileContent = await rootBundle.loadString('lib/assets/google map api key');
+
+    // Look for the line that starts with "api key:" (case insensitive)
+    final apiKeyLine = fileContent.split('\n').firstWhere(
+          (line) => line.toLowerCase().trim().startsWith('api key:'),
+      orElse: () => '',
+    );
+
+    // Extract the API key by removing the label "api key:" and trimming whitespace.
+    final apiKey = apiKeyLine.replaceFirst(RegExp(r'api key:', caseSensitive: false), '').trim();
+
+    return apiKey;
+  }
+
   Future<void> _getCurrentLocationGoogleMaps() async {
     bool serviceEnabled;
     LocationPermission permission;
@@ -164,15 +182,17 @@ class _AuthScreenState extends State<AuthScreen> {
     });
 
     Position position = await Geolocator.getCurrentPosition();
-    //TODO: add google maps implementation
-    /*//for Google maps implementation
+    //for Google maps implementation
     final lat = position.latitude;
     final lng = position.longitude;
 
+    final apiKey = await loadGoogleMapApiKey();
+
     final url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=YOUR_API_KEY'); //need api key!
+        'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey'); //need api key!
     final response = await http.get(url);
     final resData = json.decode(response.body);
+    print(resData);
     _userModel["location"] = {
       "lat": lat,
       "lng": lng,
@@ -184,7 +204,6 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() {
       _address = _userModel["location"]["address"];
     });
-     */
   }
 
   Future<void> _getCurrentLocation() async {
@@ -210,7 +229,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
     Position position = await Geolocator.getCurrentPosition();
     if (!mounted) {
-        return;
+      return;
     }
     if (kIsWeb) {
       Map<String, dynamic> address = await _getAddressFromLatLngWeb(
@@ -244,13 +263,18 @@ class _AuthScreenState extends State<AuthScreen> {
   Future<void> _loadMapGooglePicker() async {
     LatLng? position = await Navigator.of(context).push<LatLng>(
         MaterialPageRoute(builder: (ctx) => const GoogleMapScreen()
-    ));
-    /*//for Google maps implementation
+        ));
+    if (position == null) {
+      return;
+    }
+    //for Google maps implementation
     final lat = position.latitude;
     final lng = position.longitude;
 
+    final apiKey = await loadGoogleMapApiKey();
+
     final url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=YOUR_API_KEY'); //need api key!
+        'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey'); //need api key!
     final response = await http.get(url);
     final resData = json.decode(response.body);
     _userModel["location"] = {
@@ -264,13 +288,13 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() {
       _address = _userModel["location"]["address"];
     });
-     */
+
   }
 
   Future<void> _loadMapPicker() async {
     List<double>? pickedLocation = await Navigator.of(context).push<List<double>>(
         MaterialPageRoute(builder: (ctx) => const StaticMapPickerScreen()
-    ));
+        ));
     setState(() {
       _isGettingLocation = true;
     });
@@ -423,15 +447,15 @@ class _AuthScreenState extends State<AuthScreen> {
                                   children: [
                                     TextButton.icon(
                                       icon: const Icon(Icons.location_on),
-                                      onPressed: _getCurrentLocation,
+                                      onPressed: _getCurrentLocationGoogleMaps,
                                       label: const AutoSizeText(
                                           "Get Current Location"),
                                     ),
                                     TextButton.icon(
                                       icon: const Icon(Icons.map),
-                                      onPressed: _loadMapPicker,
+                                      onPressed: _loadMapGooglePicker,
                                       label:
-                                          const AutoSizeText("Select on Map"),
+                                      const AutoSizeText("Select on Map"),
                                     ),
                                   ],
                                 ),
