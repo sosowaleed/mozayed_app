@@ -45,8 +45,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _loadMapPicker(UserModel user) async {
     List<double>? pickedLocation =
         await Navigator.of(context).push<List<double>>(MaterialPageRoute(
-            builder: (ctx) => StaticMapPickerScreen(
-                  lat: user.location.lat, lng: user.location.lng,
+            builder: (ctx) => GoogleMapScreen(
+                  latitude: user.location.lat, longitude: user.location.lng,
                 )));
     if (pickedLocation == null) {
       return;
