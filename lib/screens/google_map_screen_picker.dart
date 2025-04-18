@@ -107,7 +107,7 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
             IconButton(
               icon: Icon(Icons.save, color: Theme.of(context).colorScheme.onPrimary),
               onPressed: () {
-                Navigator.of(context).pop<LatLng>(_pickedLocation);
+                Navigator.of(context).pop<List<double>>([_pickedLocation!.latitude, _pickedLocation!.longitude]);
               },
             ),
         ],
