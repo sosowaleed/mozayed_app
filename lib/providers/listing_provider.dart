@@ -1,4 +1,7 @@
+import 'dart:developer';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mozayed_app/models/listing_model.dart';
 
@@ -76,6 +79,44 @@ class ListingsNotifier extends StateNotifier<AsyncValue<List<ListingItem>>> {
     } catch (e) {
       rethrow;
     }
+  }
+
+  // A method for deleting a listing.
+  Future<void> deleteListing(ListingItem listing) async {
+    try {
+      // Get a reference to the container (folder) for this item/bid.
+      final containerRef = FirebaseStorage.instance
+          .ref()
+          .child("listing_images")
+          .child(listing.id);
+      // List all items in this container.
+      final listResult = await containerRef.listAll();
+      // Delete each file.
+      for (var itemRef in listResult.items) {
+        try {
+          await itemRef.delete();
+          log("Deleted image: ${itemRef.fullPath}");
+        } catch (e) {
+          log("Error deleting image ${itemRef.fullPath}: $e");
+        }
+      }
+      await FirebaseFirestore.instance
+          .collection('listings')
+          .doc(listing.id)
+          .delete();
+      // If the listing is a bid listing, delete its corresponding bid document.
+      if (listing.saleType == SaleType.bid) {
+        await FirebaseFirestore.instance
+            .collection('bids')
+            .doc(listing.id)
+            .delete();
+      }
+      // same options as above, re-fetch listings or update list locally.
+      await fetchListings();
+    } catch (e) {
+      rethrow;
+    }
+
   }
 
 

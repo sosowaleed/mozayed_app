@@ -132,27 +132,9 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     if (confirmed != true) return;
 
     try {
-      // Reference the container of images.
-      final containerRef = FirebaseStorage.instance
-          .ref()
-          .child("listing_images")
-          .child(widget.listing.id);
+      await ref.read(listingsProvider.notifier).deleteListing(widget.listing);
 
-      // List all files in this folder.
-      final listResult = await containerRef.listAll();
-      // Delete each file.
-      for (var fileRef in listResult.items) {
-        await fileRef.delete();
-        log("Deleted file: ${fileRef.fullPath}");
-      }
-
-      // Delete the listing document from Firestore.
-      await FirebaseFirestore.instance
-          .collection("listings")
-          .doc(widget.listing.id)
-          .delete();
-
-      // Optionally show a snackbar and navigate away.
+      // If mounted, show a snackbar and navigate away.
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -239,7 +221,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       });
     } else {
       String address =
-          await _getAddressFromLatLng(pickedLocation![0], pickedLocation[1]);
+          await _getAddressFromLatLng(pickedLocation[0], pickedLocation[1]);
       setState(() {
         _address = address;
         _isGettingLocation = false;
@@ -736,10 +718,12 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                     ),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red[400],
+                        backgroundColor: Colors.red,
                       ),
                       onPressed: _deleteListing,
-                      child: const Text("Delete Listing"),
+                      child: Text("Delete Listing", style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      )),
                     ),
                   ],
                 ),

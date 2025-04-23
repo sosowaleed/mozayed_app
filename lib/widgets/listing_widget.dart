@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:mozayed_app/models/listing_model.dart';
 import 'package:mozayed_app/screens/listing_details_screen.dart';
 import 'dart:typed_data';
+import 'package:mozayed_app/utils/global_image_cache.dart';
 
 class ListingWidget extends StatefulWidget {
   final ListingItem listingItem;
@@ -18,12 +19,13 @@ class _ListingWidgetState extends State<ListingWidget> {
   List<Uint8List?> _imageBytesCache = [];
   late ListingItem listingItem;
   int _currentImageIndex = 0;
-  bool _isLoadingImages = true;
+  late bool _isLoadingImages;
 
   @override
   void initState() {
     super.initState();
     listingItem = widget.listingItem;
+    _isLoadingImages = true;
     _preloadImages();
   }
 
@@ -59,10 +61,16 @@ class _ListingWidgetState extends State<ListingWidget> {
 
   // Helper function to get image bytes from Firebase Storage
   Future<Uint8List?> _getImageBytes(String imageUrl) async {
+    if (globalImageCache.containsKey(imageUrl)) {
+      return globalImageCache[imageUrl];
+    }
     try {
       final ref = FirebaseStorage.instance.refFromURL(imageUrl);
-      return await ref.getData();
+      final bytes =  await ref.getData();
+      globalImageCache[imageUrl] = bytes;
+      return bytes;
     } catch (e) {
+      globalImageCache[imageUrl] = null;
       return null;
     }
   }
