@@ -2,6 +2,7 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:mozayed_app/models/listing_model.dart';
 import 'package:mozayed_app/providers/listing_provider.dart';
 import 'package:mozayed_app/providers/orders_provider.dart';
@@ -184,7 +185,7 @@ class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
                                         : const Icon(Icons.image, size: 50),
                                     title: AutoSizeText(listing.title),
                                     subtitle: AutoSizeText(
-                                        "\$${listing.price.toStringAsFixed(2)} | Ordered Qty: ${currentOrder["quantity"]} | Ordered on: ${currentOrder["orderDate"]}"),
+                                        "${NumberFormat('#,##0.00').format(listing.price)} | Ordered Qty: ${currentOrder["quantity"]} | Ordered on: ${currentOrder["orderDate"]}"),
                                     onTap: () {
                                       Navigator.push(
                                         context,
@@ -240,8 +241,8 @@ class _UserHistoryScreenState extends ConsumerState<UserHistoryScreen> {
                                         as List<dynamic>;
                                         final userBid = userBidHistory
                                             .last["bidAmount"];
-                                        return "Your Bid: \$$userBid "
-                                            "Current Highest Bid: \$${(listing.currentHighestBid ?? listing.startingBid ?? listing.price).toStringAsFixed(2)} | "
+                                        return "Your Bid: \$${NumberFormat('#,##0.00').format(userBid)} "
+                                            "Current Highest Bid: \$${NumberFormat('#,##0.00').format(listing.currentHighestBid ?? listing.startingBid ?? listing.price)} | "
                                             "End Date: ${listing.bidEndTime}";
                                       }(),
                                     ),

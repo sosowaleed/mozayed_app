@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:intl/intl.dart';
 import 'package:mozayed_app/models/listing_model.dart';
 import 'package:mozayed_app/screens/listing_details_screen.dart';
 import 'dart:typed_data';
@@ -204,7 +205,7 @@ class _ListingWidgetState extends State<ListingWidget> {
                           TextSpan(
                             children: [
                               TextSpan(
-                                text: listingItem.price.toStringAsFixed(2),
+                                text: NumberFormat('#,##0.00').format(listingItem.price),
                                 style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,

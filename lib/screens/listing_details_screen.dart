@@ -3,6 +3,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 import 'package:mozayed_app/models/listing_model.dart';
 import 'package:mozayed_app/models/user_model.dart';
 import 'package:mozayed_app/providers/cart_provider.dart';
@@ -125,7 +126,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              "Your bid must be higher than SAR ${currentBid.toStringAsFixed(2)}"),
+              "Your bid must be higher than SAR ${NumberFormat('#,##0.00').format(currentBid)}"),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -147,7 +148,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text("Confirm Bid"),
         content:
-        Text("Are you sure you want to bid SAR ${enteredBid.toStringAsFixed(2)}?"),
+        Text("Are you sure you want to bid SAR ${NumberFormat('#,##0.00').format(enteredBid)}?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -188,7 +189,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Bid of SAR ${enteredBid.toStringAsFixed(2)} placed!"),
+            content: Text("Bid of SAR ${NumberFormat('#,##0.00').format(enteredBid)} placed!"),
             duration: const Duration(seconds: 1),
           ),
         );
@@ -446,7 +447,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "Price: SAR ${listing.price.toStringAsFixed(2)}",
+                    "Price: SAR ${NumberFormat('#,##0.00').format(listing.price)}",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                   ),
                   const SizedBox(height: 8),
@@ -514,7 +515,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                               dense: true,
                               leading: const Icon(Icons.account_circle),
                               title: Text(
-                                "Bid: SAR ${(bidEntry['bidAmount'] as num).toStringAsFixed(2)}",
+                                "Bid: SAR ${NumberFormat('#,##0.00').format(bidEntry['bidAmount'] as num)}",
                                 style: const TextStyle(fontSize: 14),
                               ),
                               subtitle: Text(
@@ -581,7 +582,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                 ? Column(
               children: [
                 Text(
-                  "Current Highest Bid: SAR ${(listing.currentHighestBid ?? listing.startingBid ?? listing.price).toStringAsFixed(2)}",
+                  "Current Highest Bid: SAR ${NumberFormat('#,##0.00').format(listing.currentHighestBid ?? listing.startingBid ?? listing.price)}",
                   style: const TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 8),

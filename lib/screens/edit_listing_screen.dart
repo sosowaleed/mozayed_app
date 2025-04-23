@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:mozayed_app/models/listing_model.dart';
 import 'package:mozayed_app/providers/listing_provider.dart';
 import 'package:mozayed_app/screens/google_map_screen_picker.dart';
@@ -661,7 +662,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                   if (_listingData["currentHighestBid"] != null)
                     const SizedBox(height: 12),
                   Text(
-                    "Current Highest Bid: SAR ${_listingData["currentHighestBid"]}",
+                    "Current Highest Bid: SAR ${NumberFormat('#,##0.00').format(double.tryParse(_listingData["currentHighestBid"] ?? '0'))}",
                     style: const TextStyle(fontSize: 16),
                   ),
                 ],

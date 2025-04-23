@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:mozayed_app/providers/cart_provider.dart';
 import 'package:mozayed_app/providers/user_and_auth_provider.dart';
 import 'package:mozayed_app/widgets/listing_widget.dart';
@@ -117,7 +118,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             .map((cartItem) => {
                   'listingId': cartItem.listing.id,
                   'quantity': cartItem.quantity,
-                  'price': cartItem.listing.price,
+                  'price': NumberFormat('#,##0.00').format(cartItem.listing.price),
                   'title': cartItem.listing.title,
                 })
             .toList(),

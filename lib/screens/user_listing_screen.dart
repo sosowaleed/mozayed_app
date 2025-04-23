@@ -7,6 +7,7 @@ import 'package:mozayed_app/screens/sell_screen.dart';
 import 'package:mozayed_app/screens/edit_listing_screen.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:typed_data';
+import 'package:intl/intl.dart';
 
 class MyListingsScreen extends ConsumerWidget {
   const MyListingsScreen({super.key});
@@ -81,7 +82,7 @@ class MyListingsScreen extends ConsumerWidget {
                 )
                     : const Icon(Icons.image),
                 title: Text(listing.title),
-                subtitle: Text("SAR ${listing.price.toStringAsFixed(2)}"),
+                subtitle: Text("SAR ${NumberFormat('#,##0.00').format(listing.price)}"),
                 trailing: Text("Sale Type: ${listing.saleType.name}"),
                 onTap: () {
                   Navigator.push(
