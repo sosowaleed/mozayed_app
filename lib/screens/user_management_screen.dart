@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mozayed_app/models/user_model.dart';
 import 'package:mozayed_app/providers/all_users_provider.dart';
 
+// Main screen for managing users
 class UserManagementScreen extends ConsumerStatefulWidget {
   const UserManagementScreen({super.key});
 
@@ -13,22 +14,31 @@ class UserManagementScreen extends ConsumerStatefulWidget {
 }
 
 class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
+  // Controller for the search input field
   final TextEditingController _searchController = TextEditingController();
+
+  // Filters for user roles, activation status, and suspension status
   String _roleFilter = "All"; // "All", "Admin", "Not Admin"
   String _activationFilter = "All"; // "All", "Activated", "Deactivated"
   String _suspendedFilter = "All"; // "All", "Suspended", "Not Suspended"
-  bool _filtersVisible = false; // Default: filters hidden
+
+  // Visibility toggle for the filter section
+  bool _filtersVisible = false;
 
   @override
   void dispose() {
+    // Dispose of the search controller when the widget is removed
     _searchController.dispose();
     super.dispose();
   }
 
+  // Function to show a bottom sheet for editing user details
   Future<void> _showEditUserSheet(UserModel user) async {
     bool newActivated = user.activated;
     bool newSuspended = user.suspended;
     bool newAdmin = user.admin;
+
+    // Display a modal bottom sheet with user editing options
     await showModalBottomSheet(
       context: context,
       builder: (context) {
@@ -37,11 +47,13 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
             padding: const EdgeInsets.all(16.0),
             child: Wrap(
               children: [
+                // Title displaying the user's name
                 Text(
                   "Edit User: ${user.name}",
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
+                // Switches for toggling user properties
                 SwitchListTile(
                   title: const Text("Activated"),
                   value: newActivated,
@@ -70,11 +82,13 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
+                // Buttons for saving or canceling changes
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     ElevatedButton(
                       onPressed: () async {
+                        // Update user details in Firestore
                         await FirebaseFirestore.instance
                             .collection("users")
                             .doc(user.id)
@@ -105,16 +119,19 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        // App bar title
         title: const Text("User Management"),
       ),
       body: Consumer(
         builder: (context, ref, _) {
+          // Watch the users provider for data
           final usersAsync = ref.watch(usersProvider);
+
           return usersAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, st) => Center(child: Text("Error: $e")),
             data: (allUsers) {
-              // Compute filtered users based on search and dropdown values.
+              // Filter users based on search and dropdown filters
               final searchTerm = _searchController.text.toLowerCase();
               final filteredUsers = allUsers.where((user) {
                 final matchesSearch =
@@ -137,7 +154,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
 
               return Column(
                 children: [
-                  // Search
+                  // Search input field
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: TextField(
@@ -147,11 +164,11 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                         border: OutlineInputBorder(),
                       ),
                       onChanged: (_) {
-                        setState(() {}); // update filtering
+                        setState(() {}); // Update filtering
                       },
                     ),
                   ),
-                  // Toggle Filters Button
+                  // Button to toggle filter visibility
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8.0),
                     child: ElevatedButton.icon(
@@ -166,7 +183,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                       },
                     ),
                   ),
-                  // Filter Dropdowns (visible only when _filtersVisible is true)
+                  // Filter dropdowns (visible only when _filtersVisible is true)
                   if (_filtersVisible)
                     Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -174,7 +191,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                         children: [
                           Row(
                             children: [
-                              // Role Dropdown.
+                              // Role filter dropdown
                               Expanded(
                                 child: DropdownButtonFormField<String>(
                                   decoration: const InputDecoration(
@@ -194,7 +211,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              // Activation Dropdown.
+                              // Activation filter dropdown
                               Expanded(
                                 child: DropdownButtonFormField<String>(
                                   decoration: const InputDecoration(
@@ -218,7 +235,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              // Suspended Dropdown.
+                              // Suspension filter dropdown
                               Expanded(
                                 child: DropdownButtonFormField<String>(
                                   decoration: const InputDecoration(
@@ -237,14 +254,14 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                                   },
                                 ),
                               ),
-                              // You can leave extra space or add extra filter controls here.
                             ],
                           ),
                           const SizedBox(height: 8),
+                          // Button to apply filters
                           ElevatedButton(
                             onPressed: () {
                               setState(
-                                  () {}); // trigger rebuild to apply filter changes
+                                  () {}); // Trigger rebuild to apply filter changes
                             },
                             child: const Text("Apply Filter"),
                           ),
@@ -252,7 +269,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                       ),
                     ),
                   const Divider(),
-                  // List of Users.
+                  // List of filtered users
                   Expanded(
                     child: filteredUsers.isEmpty
                         ? const Center(child: Text("No users found"))

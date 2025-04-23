@@ -13,8 +13,10 @@ import 'dart:developer';
 import 'package:flutter/services.dart';
 import 'package:mozayed_app/screens/static_flutter_map_screen.dart';
 
+/// Firebase Authentication instance
 final _firebaseAuth = FirebaseAuth.instance;
 
+/// A StatefulWidget for user authentication (login and signup).
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
@@ -23,13 +25,14 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  String _password = "";
-  String _address = "No address";
-  final _formKey = GlobalKey<FormState>();
-  final Map<String, dynamic> _userModel = {};
-  bool _isLogin = true;
-  bool _isGettingLocation = false;
+  String _password = ""; // Stores the user's password
+  String _address = "No address"; // Stores the user's address
+  final _formKey = GlobalKey<FormState>(); // Key for the form validation
+  final Map<String, dynamic> _userModel = {}; // Stores user data
+  bool _isLogin = true; // Tracks whether the user is logging in or signing up
+  bool _isGettingLocation = false; // Tracks if the app is fetching the user's location
 
+  /// Handles saving the form data and performing login or signup.
   void _save() async {
     if (!_formKey.currentState!.validate()) {
       if (_address == "No address" || _address == "Address not found") {
@@ -56,9 +59,9 @@ class _AuthScreenState extends State<AuthScreen> {
 
         // Add user data to Firestore
         _userModel["id"] = userCredential.user!.uid;
-        _userModel["admin"] = false; // default to false, enabled by backend later
-        _userModel["suspended"] = false; // default to false
-        _userModel["activated"] = true; // default to true
+        _userModel["admin"] = false; // Default to false, enabled by backend later
+        _userModel["suspended"] = false; // Default to false
+        _userModel["activated"] = true; // Default to true
 
         await FirebaseFirestore.instance
             .collection("users")
@@ -76,6 +79,7 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  /// Fetches the address from latitude and longitude using OpenStreetMap API (for web).
   Future _getAddressFromLatLngWeb({
     required double lat,
     required double lng,
@@ -113,6 +117,7 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  /// Fetches the address from latitude and longitude using the geocoding package.
   Future _getAddressFromLatLng(double latitude, double longitude) async {
     try {
       final List<geo.Placemark> placeMarks =
@@ -142,6 +147,7 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  /// Fetches the user's current location and updates the address.
   Future<void> _getCurrentLocation() async {
     bool serviceEnabled;
     LocationPermission permission;
@@ -196,6 +202,7 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  /// Opens a Google Map picker for the user to select a location.
   Future<void> _loadMapGooglePicker() async {
     LatLng? position = await Navigator.of(context).push<LatLng>(
         MaterialPageRoute(builder: (ctx) => const GoogleMapScreen()
@@ -206,7 +213,7 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() {
       _isGettingLocation = true;
     });
-    //for Google maps implementation
+    // For Google Maps implementation
     final lat = position.latitude;
     final lng = position.longitude;
     if (!mounted) {
@@ -243,49 +250,6 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  // Not needed.
-  /*Future<void> _loadMapPicker() async {
-    List<double>? pickedLocation = await Navigator.of(context).push<List<double>>(
-        MaterialPageRoute(builder: (ctx) => const StaticMapPickerScreen()
-        ));
-    setState(() {
-      _isGettingLocation = true;
-    });
-
-    if (!mounted) {
-      return;
-    }
-    if (kIsWeb) {
-      Map<String, dynamic> address = await _getAddressFromLatLngWeb(
-        lat: pickedLocation![0],
-        lng: pickedLocation[1],
-        lang: Localizations.localeOf(context),
-      );
-
-      if(address["display_name"] != "address not found") {
-        _userModel["location"] = {
-          "lat": pickedLocation[0],
-          "lng": pickedLocation[1],
-          "address": address["display_name"],
-          "city": address["address"]["city"],
-          "zip": address["address"]["postcode"],
-          "country": address["address"]["country"],
-        };
-      }
-
-      setState(() {
-        _address = address["display_name"];
-        _isGettingLocation = false;
-      });
-    } else {
-      String address = await _getAddressFromLatLng(pickedLocation![0], pickedLocation[1]);
-      setState(() {
-        _address =  address;
-        _isGettingLocation = false;
-      });
-    }
-  }*/
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -295,6 +259,7 @@ class _AuthScreenState extends State<AuthScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // App title
               Container(
                 margin: const EdgeInsets.only(
                     top: 30, bottom: 20, left: 20, right: 20),
@@ -310,6 +275,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   textAlign: TextAlign.center,
                 ),
               ),
+              // App subtitle
               Container(
                 margin: const EdgeInsets.only(
                     top: 0, bottom: 20, left: 20, right: 20),
@@ -326,6 +292,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   textAlign: TextAlign.center,
                 ),
               ),
+              // Authentication form
               Card(
                 margin: const EdgeInsets.all(20),
                 child: SingleChildScrollView(
@@ -336,6 +303,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // Username field (only for signup)
                           if (!_isLogin)
                             TextFormField(
                               decoration: const InputDecoration(
@@ -353,6 +321,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 _userModel['name'] = username!;
                               },
                             ),
+                          // Email field
                           TextFormField(
                             decoration: const InputDecoration(
                               labelText: "Email Address",
@@ -372,6 +341,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               _userModel['email'] = email!;
                             },
                           ),
+                          // Password field
                           TextFormField(
                             decoration: const InputDecoration(
                               labelText: "Password",
@@ -391,6 +361,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           const SizedBox(
                             height: 12,
                           ),
+                          // Location options (only for signup)
                           if (!_isLogin)
                             Column(
                               children: [
@@ -423,6 +394,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           const SizedBox(
                             height: 12,
                           ),
+                          // Submit button
                           ElevatedButton(
                             onPressed: _save,
                             style: ElevatedButton.styleFrom(
@@ -432,6 +404,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             ),
                             child: Text(_isLogin ? "Login" : "SignUp"),
                           ),
+                          // Toggle between login and signup
                           TextButton(
                             onPressed: () {
                               setState(() {

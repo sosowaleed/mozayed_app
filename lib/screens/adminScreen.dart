@@ -16,6 +16,7 @@ class AdminScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminScreenState extends ConsumerState<AdminScreen> {
+  // List of main menu items for the admin screen, each containing a title, icon, and associated screen.
   final List<Map<String, dynamic>> _mainMenuItems = [
     {
       'title': 'Reports',
@@ -34,22 +35,23 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     },
   ];
 
-  int _selectedIndex = 0;
+  int _selectedIndex = 0; // Tracks the currently selected menu item.
 
+  // Updates the selected index when a menu item is tapped.
   void _onMainItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
   }
 
-  // Build the profile popup menu button for the AppBar.
+  // Builds the profile popup menu button for the AppBar.
   Widget _buildProfileMenuButton(
       BuildContext ctx, List<Map<String, dynamic>> profileMenuItems) {
     return PopupMenuButton<Map<String, dynamic>>(
       icon: const CircleAvatar(
         child: Icon(Icons.person),
       ),
-      onSelected: (item) => item['onTap'](ctx),
+      onSelected: (item) => item['onTap'](ctx), // Executes the selected item's action.
       itemBuilder: (context) {
         return profileMenuItems.map((item) {
           return PopupMenuItem<Map<String, dynamic>>(
@@ -58,7 +60,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
               children: [
                 Icon(item['icon'], size: 20),
                 const SizedBox(width: 8),
-                item['title'],
+                item['title'], // Displays the item's title.
               ],
             ),
           );
@@ -71,6 +73,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   Widget build(BuildContext context) {
     final reports = ref.watch(reportsProvider);
 
+    // Handles the state of the reports provider (data, loading, error).
     reports.when(
       data: (reportMap) {
         if (reportMap.isEmpty) {
@@ -78,16 +81,17 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         }
       },
       loading: () {
-        // Show a loading indicator
+        // Show a loading indicator while fetching reports.
         return const Center(child: CircularProgressIndicator());
       },
       error: (error, stackTrace) {
-        // Handle the error
+        // Logs and displays an error message if fetching reports fails.
         log('Error fetching report data: $error');
         return Center(child: Text('Error: $error'));
       },
     );
 
+    // Profile menu items for the AppBar.
     final List<Map<String, dynamic>> profileMenuItems = [
       {
         'title': const Text("Home Screen"),
@@ -107,14 +111,14 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         ),
         'icon': Icons.logout,
         'onTap': (context) async {
-          await FirebaseAuth.instance.signOut();
+          await FirebaseAuth.instance.signOut(); // Signs out the user.
         },
       },
     ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isPhone = constraints.maxWidth < 650;
+        final isPhone = constraints.maxWidth < 650; // Determines if the device is a phone.
 
         return Scaffold(
           backgroundColor: Theme.of(context).colorScheme.surface,
@@ -125,18 +129,17 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
               style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
             ),
             actions: [
-              // Display the profile icon as a popup menu button
-              // Passing the context and the profile menu items.
+              // Displays the profile menu button in the AppBar.
               _buildProfileMenuButton(context, profileMenuItems),
               const SizedBox(width: 10),
             ],
           ),
-          // For larger screens, use a persistent drawer; for phones, use a bottom nav.
+          // Displays a bottom navigation bar for phones or a persistent drawer for larger screens.
           body: isPhone
               ? _mainMenuItems[_selectedIndex]['screen']
               : Row(
                   children: [
-                    // Always-open drawer-like widget
+                    // Persistent drawer-like widget for larger screens.
                     Container(
                       width: 200,
                       color: Theme.of(context).colorScheme.secondaryContainer,
@@ -154,7 +157,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                         }).toList(),
                       ),
                     ),
-                    // Main content area
+                    // Main content area.
                     Expanded(
                       child: _mainMenuItems[_selectedIndex]['screen'],
                     ),
@@ -177,7 +180,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                       )
                       .toList(),
                   currentIndex: _selectedIndex,
-                  onTap: _onMainItemTapped,
+                  onTap: _onMainItemTapped, // Updates the selected index.
                 )
               : null,
         );

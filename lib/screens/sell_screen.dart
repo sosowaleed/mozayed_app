@@ -1,3 +1,4 @@
+// Import necessary packages
 import 'dart:io';
 import 'dart:convert';
 import 'dart:developer';
@@ -14,6 +15,7 @@ import 'package:mozayed_app/screens/google_map_screen_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
+// Stateful widget for the Sell Screen
 class SellScreen extends ConsumerStatefulWidget {
   final bool showBackButton; // Determines if the back button should be shown
   const SellScreen({super.key, this.showBackButton = false});
@@ -41,7 +43,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     "Other"
   ];
 
-  // ValueNotifiers to track selected dropdown values
+  // ValueNotifiers to track selected dropdown values and other states
   final ValueNotifier<String> _selectedConditionNotifier =
       ValueNotifier<String>("New");
   final ValueNotifier<String> _selectedCategoryNotifier =
@@ -49,12 +51,17 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   final ValueNotifier<String?> _addressNotifier = ValueNotifier<String?>(null);
   final ValueNotifier<SaleType> _saleTypeNotifier =
       ValueNotifier<SaleType>(SaleType.buyNow);
-  final ValueNotifier<bool> _isGettingLocationNotifier = ValueNotifier<bool>(false); // Replace _isGettingLocation
-  final ValueNotifier<String?> _bidEndTimeNotifier = ValueNotifier<String?>(null); // New notifier for bid end time
-  final ValueNotifier<List<XFile>> _pickedImagesNotifier = ValueNotifier<List<XFile>>([]); // Use ValueNotifier for images
+  final ValueNotifier<bool> _isGettingLocationNotifier =
+      ValueNotifier<bool>(false); // Tracks location fetching state
+  final ValueNotifier<String?> _bidEndTimeNotifier =
+      ValueNotifier<String?>(null); // Tracks bid end time
+  final ValueNotifier<List<XFile>> _pickedImagesNotifier =
+      ValueNotifier<List<XFile>>([]); // Tracks selected images
 
   final _formKey = GlobalKey<FormState>(); // Form key for validation
-  final Map<String, dynamic> _listingData = {"image": <String>[]}; // Listing data
+  final Map<String, dynamic> _listingData = {
+    "image": <String>[]
+  }; // Stores listing data
   bool _isLoading = false; // Tracks if the listing is being saved
 
   final ImagePicker _picker = ImagePicker(); // Image picker instance
@@ -72,7 +79,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     _listingData["quantity"] = "";
     _listingData["condition"] = _selectedConditionNotifier.value;
     _listingData["category"] = _selectedCategoryNotifier.value;
-    _bidEndTimeNotifier.value = _listingData["bidEndTime"]; // Initialize bid end time notifier
+    _bidEndTimeNotifier.value =
+        _listingData["bidEndTime"]; // Initialize bid end time notifier
     _pickedImagesNotifier.value = []; // Initialize picked images
     _pageController = PageController();
   }
@@ -97,7 +105,10 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     final pickedFile =
         await _picker.pickImage(source: source, imageQuality: 80);
     if (pickedFile != null) {
-      _pickedImagesNotifier.value = [..._pickedImagesNotifier.value, pickedFile]; // Update ValueNotifier
+      _pickedImagesNotifier.value = [
+        ..._pickedImagesNotifier.value,
+        pickedFile
+      ]; // Update ValueNotifier
     }
   }
 
@@ -153,6 +164,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
 
   // Saves the listing data to the backend
   Future<void> _saveListing(UserModel user) async {
+    // Validates the form and saves the listing data
     if (!_formKey.currentState!.validate()) return;
 
     _formKey.currentState!.save();
@@ -197,6 +209,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
       }
     }
 
+    // Create a new listing object
     final listing = ListingItem(
       id: listingId,
       ownerId: user.id,
@@ -220,12 +233,15 @@ class _SellScreenState extends ConsumerState<SellScreen> {
       bidFinalized: false,
     );
 
+    // Add the listing to the provider and show success message
     await ref.read(listingsProvider.notifier).addListing(listing);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Published Successfully")),
       );
     }
+
+    // Reset the form and loading state
     setState(() {
       _isLoading = false;
       _formKey.currentState!.reset();
@@ -296,6 +312,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Fetch user data and handle different states (loading, error, data)
     final userAsyncValue = ref.read(userDataProvider);
 
     return userAsyncValue.when(
@@ -313,6 +330,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
           }
           final UserModel user = UserModel.fromMap(userData);
 
+          // Build the UI for the Sell Screen
           return FutureBuilder<bool?>(
             future: _isSuspended(),
             builder: (context, snapshot) {
@@ -341,7 +359,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                         backgroundColor: Theme.of(context).colorScheme.surface,
                         appBar: widget.showBackButton
                             ? AppBar(
-                                automaticallyImplyLeading: widget.showBackButton,
+                                automaticallyImplyLeading:
+                                    widget.showBackButton,
                                 title: const Text("Sell"),
                               )
                             : null,
@@ -369,7 +388,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                                 fit: StackFit.expand,
                                                 children: [
                                                   Image.file(
-                                                    File(pickedImages[index].path),
+                                                    File(pickedImages[index]
+                                                        .path),
                                                     fit: BoxFit.cover,
                                                   ),
                                                   Positioned(
@@ -377,10 +397,14 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                                     right: 0,
                                                     left: 0,
                                                     child: IconButton(
-                                                      icon: const Icon(Icons.close,
+                                                      icon: const Icon(
+                                                          Icons.close,
                                                           color: Colors.red),
-                                                      onPressed: () => _removeImage(
-                                                          xFile: pickedImages[index]),
+                                                      onPressed: () =>
+                                                          _removeImage(
+                                                              xFile:
+                                                                  pickedImages[
+                                                                      index]),
                                                     ),
                                                   ),
                                                 ],
@@ -394,31 +418,38 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                               top: 0,
                                               bottom: 0,
                                               child: IconButton(
-                                                padding: const EdgeInsets.all(32),
-                                                icon: const Icon(Icons.arrow_back_ios,
-                                                    size: 15, color: Colors.grey),
+                                                padding:
+                                                    const EdgeInsets.all(32),
+                                                icon: const Icon(
+                                                    Icons.arrow_back_ios,
+                                                    size: 15,
+                                                    color: Colors.grey),
                                                 onPressed: () {
                                                   _pageController.previousPage(
-                                                      duration:
-                                                          const Duration(milliseconds: 300),
+                                                      duration: const Duration(
+                                                          milliseconds: 300),
                                                       curve: Curves.easeInOut);
                                                 },
                                               ),
                                             ),
                                           if (pickedImages.length > 1 &&
-                                              _currentImageIndex < pickedImages.length - 1)
+                                              _currentImageIndex <
+                                                  pickedImages.length - 1)
                                             Positioned(
                                               right: 0,
                                               top: 0,
                                               bottom: 0,
                                               child: IconButton(
-                                                padding: const EdgeInsets.all(32),
-                                                icon: const Icon(Icons.arrow_forward_ios,
-                                                    size: 15, color: Colors.grey),
+                                                padding:
+                                                    const EdgeInsets.all(32),
+                                                icon: const Icon(
+                                                    Icons.arrow_forward_ios,
+                                                    size: 15,
+                                                    color: Colors.grey),
                                                 onPressed: () {
                                                   _pageController.nextPage(
-                                                      duration:
-                                                          const Duration(milliseconds: 300),
+                                                      duration: const Duration(
+                                                          milliseconds: 300),
                                                       curve: Curves.easeInOut);
                                                 },
                                               ),
@@ -431,7 +462,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                               child: Text(
                                                 '${_currentImageIndex + 1} / ${pickedImages.length}',
                                                 style: const TextStyle(
-                                                    color: Colors.white, fontSize: 18),
+                                                    color: Colors.white,
+                                                    fontSize: 18),
                                               ),
                                             ),
                                           )
@@ -477,19 +509,21 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                         items: SaleType.values.map((saleType) {
                                           return DropdownMenuItem<SaleType>(
                                             value: saleType,
-                                            child: Text(saleType ==
-                                                    SaleType.buyNow
-                                                ? "Buy Now"
-                                                : "Bidding"),
+                                            child: Text(
+                                                saleType == SaleType.buyNow
+                                                    ? "Buy Now"
+                                                    : "Bidding"),
                                           );
                                         }).toList(),
                                         onChanged: (value) {
                                           if (value != null &&
-                                              value != _saleTypeNotifier.value) {
+                                              value !=
+                                                  _saleTypeNotifier.value) {
                                             _saleTypeNotifier.value = value;
                                             if (value == SaleType.buyNow) {
                                               _listingData.remove("bidEndTime");
-                                              _listingData.remove("startingBid");
+                                              _listingData
+                                                  .remove("startingBid");
                                             }
                                           }
                                         },
@@ -499,8 +533,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                   const SizedBox(height: 12),
                                   // Form fields for title, description, price, etc.
                                   TextFormField(
-                                    decoration:
-                                        const InputDecoration(labelText: "Title"),
+                                    decoration: const InputDecoration(
+                                        labelText: "Title"),
                                     validator: (value) {
                                       if (value == null ||
                                           value.trim().length < 4) {
@@ -526,19 +560,21 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                       builder: (context, bidEndTime, child) {
                                         return ElevatedButton(
                                           onPressed: () async {
-                                            DateTime? picked = await showDatePicker(
+                                            DateTime? picked =
+                                                await showDatePicker(
                                               context: context,
                                               initialDate: DateTime.now()
                                                   .add(const Duration(days: 1)),
                                               firstDate: DateTime.now(),
-                                              lastDate: DateTime.now()
-                                                  .add(const Duration(days: 30)),
+                                              lastDate: DateTime.now().add(
+                                                  const Duration(days: 30)),
                                             );
                                             if (picked != null) {
                                               _bidEndTimeNotifier.value =
                                                   picked.toIso8601String();
                                               _listingData["bidEndTime"] =
-                                                  _bidEndTimeNotifier.value; // Update listing data
+                                                  _bidEndTimeNotifier
+                                                      .value; // Update listing data
                                             }
                                           },
                                           child: Text(
@@ -567,8 +603,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                   ],
                                   if (saleType != SaleType.bid)
                                     TextFormField(
-                                      decoration:
-                                          const InputDecoration(labelText: "Price"),
+                                      decoration: const InputDecoration(
+                                          labelText: "Price"),
                                       keyboardType: TextInputType.number,
                                       validator: (value) {
                                         if (value == null ||
@@ -605,7 +641,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                   ),
                                   ValueListenableBuilder<String>(
                                     valueListenable: _selectedConditionNotifier,
-                                    builder: (context, selectedCondition, child) {
+                                    builder:
+                                        (context, selectedCondition, child) {
                                       return DropdownButtonFormField<String>(
                                         decoration: const InputDecoration(
                                             labelText: "Condition"),
@@ -629,7 +666,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                   const SizedBox(height: 12),
                                   ValueListenableBuilder<String>(
                                     valueListenable: _selectedCategoryNotifier,
-                                    builder: (context, selectedCategory, child) {
+                                    builder:
+                                        (context, selectedCategory, child) {
                                       return DropdownButtonFormField<String>(
                                         decoration: const InputDecoration(
                                             labelText: "Category"),
@@ -642,7 +680,8 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                         }).toList(),
                                         onChanged: (value) {
                                           if (value != null) {
-                                            _selectedCategoryNotifier.value = value;
+                                            _selectedCategoryNotifier.value =
+                                                value;
                                             _listingData["category"] = value;
                                           }
                                         },
@@ -660,14 +699,15 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                                       ValueListenableBuilder<bool>(
                                         valueListenable:
                                             _isGettingLocationNotifier,
-                                        builder:
-                                            (context, isGettingLocation, child) {
+                                        builder: (context, isGettingLocation,
+                                            child) {
                                           return isGettingLocation
                                               ? const CircularProgressIndicator()
                                               : ValueListenableBuilder<String?>(
-                                                  valueListenable: _addressNotifier,
-                                                  builder:
-                                                      (context, address, child) {
+                                                  valueListenable:
+                                                      _addressNotifier,
+                                                  builder: (context, address,
+                                                      child) {
                                                     return Text(address ??
                                                         "No address selected");
                                                   },
@@ -702,6 +742,11 @@ class _SellScreenState extends ConsumerState<SellScreen> {
         });
   }
 
+  /// Disposes resources used by the `SellScreen` widget.
+  ///
+  /// This method is called when the widget is removed from the widget tree.
+  /// It ensures that all `ValueNotifier` instances are properly disposed of
+  /// to free up resources and avoid memory leaks.
   @override
   void dispose() {
     // Dispose ValueNotifiers to free resources
@@ -709,10 +754,10 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     _selectedCategoryNotifier.dispose();
     _addressNotifier.dispose();
     _saleTypeNotifier.dispose();
-    _isGettingLocationNotifier.dispose(); // Dispose the new notifier
-    _bidEndTimeNotifier.dispose(); // Dispose the new notifier
-    _pickedImagesNotifier.dispose(); // Dispose the new notifier
+    _isGettingLocationNotifier
+        .dispose(); // Dispose the location fetching notifier
+    _bidEndTimeNotifier.dispose(); // Dispose the bid end time notifier
+    _pickedImagesNotifier.dispose(); // Dispose the picked images notifier
     super.dispose();
   }
 }
-

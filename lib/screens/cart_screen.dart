@@ -8,6 +8,8 @@ import 'package:mozayed_app/widgets/listing_widget.dart';
 import 'package:http/http.dart' as http;
 import 'dart:developer';
 
+/// A screen that displays the user's cart and allows them to manage items
+/// and proceed to checkout.
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
 
@@ -16,15 +18,24 @@ class CartScreen extends ConsumerStatefulWidget {
 }
 
 class _CartScreenState extends ConsumerState<CartScreen> {
+  // Controller for the delivery address input field.
   final TextEditingController _addressController = TextEditingController();
 
   @override
   void initState() {
+    // Initialize the address controller with the user's saved address.
     _addressController.text =
         ref.read(userDataProvider).value!['location']['address'];
     super.initState();
   }
 
+  /// Handles the checkout process, including:
+  /// - Displaying a confirmation dialog.
+  /// - Showing a progress indicator.
+  /// - Updating Firestore with the new listing quantities or removing listings.
+  /// - Creating an order document in Firestore.
+  /// - Clearing the cart.
+  /// - Calling a Cloud Function to process new orders.
   Future<void> _checkout() async {
     // Show a popup form to get checkout info.
     bool? confirmed = await showDialog<bool>(
@@ -64,7 +75,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             ElevatedButton(
               onPressed: () => Navigator.of(ctx).pop(true),
               child: Text("Confirm Purchase",
-                  style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.primary)),
             ),
           ],
         );
@@ -110,6 +122,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         }
       }
 
+      // Create an order document in Firestore.
       final orderData = {
         'userId': ref.read(userDataProvider).value!['id'],
         'orderTime': DateTime.now().toIso8601String(),
@@ -118,7 +131,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             .map((cartItem) => {
                   'listingId': cartItem.listing.id,
                   'quantity': cartItem.quantity,
-                  'price': NumberFormat('#,##0.00').format(cartItem.listing.price),
+                  'price':
+                      NumberFormat('#,##0.00').format(cartItem.listing.price),
                   'title': cartItem.listing.title,
                 })
             .toList(),
@@ -139,6 +153,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           const SnackBar(content: Text("Purchase completed successfully.")),
         );
       }
+
       // Call the processNewOrders Cloud Function.
       const processOrdersUrl =
           "https://processneworders-cj7ajmydla-uc.a.run.app";
@@ -160,8 +175,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: Consumer(builder: (context, ref, child) {
+        // Watch the cart provider to get the current cart items.
         final cartItems = ref.watch(cartProvider);
         return LayoutBuilder(builder: (context, constraints) {
+          // Determine the number of columns in the grid based on screen size.
           int crossAxisCount = 2;
           if (constraints.maxWidth >= 1200 && constraints.maxHeight >= 500) {
             crossAxisCount = 6;
@@ -193,7 +210,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           return Card(
                             child: Column(
                               children: [
-                                // You may use your ListingWidget here.
+                                // Display the listing using a custom widget.
                                 Expanded(
                                   child: ListingWidget(
                                     listingItem: cartItem.listing,
@@ -207,6 +224,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceAround,
                                   children: [
+                                    // Decrease quantity button.
                                     IconButton(
                                       icon: const Icon(Icons.remove),
                                       onPressed: () {
@@ -217,6 +235,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                                 cartItem.listing.id, newQty);
                                       },
                                     ),
+                                    // Increase quantity button.
                                     IconButton(
                                       icon: const Icon(Icons.add),
                                       onPressed: () {
@@ -242,6 +261,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                         }
                                       },
                                     ),
+                                    // Remove item from cart button.
                                     IconButton(
                                       icon: const Icon(Icons.delete),
                                       onPressed: () {

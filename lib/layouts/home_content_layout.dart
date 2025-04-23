@@ -7,12 +7,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mozayed_app/providers/user_and_auth_provider.dart';
 import 'package:mozayed_app/providers/listing_provider.dart';
 
-// An enum for the location scope.
+/// An enum representing the location scope for filtering listings.
 enum LocationScope { everywhere, city, country }
 
-
+/// A stateful widget that displays the home content, including a list of filtered listings
+/// and a filter bar for users to refine their search criteria.
 class HomeContent extends ConsumerStatefulWidget {
+  /// Whether to display admin-specific information.
   final bool adminInfo;
+
+  /// Constructor for the `HomeContent` widget.
   const HomeContent({super.key, this.adminInfo = false});
 
   @override
@@ -20,16 +24,15 @@ class HomeContent extends ConsumerStatefulWidget {
 }
 
 class _HomeContentState extends ConsumerState<HomeContent> {
-
   // Filter parameters with default values.
-  String _selectedCondition = "Any";
-  String _selectedSaleType = "Any";
-  String _selectedCategory = "Any";
-  String _maxPriceText = "";
-  String _maxDistanceText = ""; // in kilometers
-  List<ListingItem> _filteredListings = [];
+  String _selectedCondition = "Any"; // Selected condition filter.
+  String _selectedSaleType = "Any"; // Selected sale type filter.
+  String _selectedCategory = "Any"; // Selected category filter.
+  String _maxPriceText = ""; // Maximum price filter input.
+  String _maxDistanceText = ""; // Maximum distance filter input (in kilometers).
+  List<ListingItem> _filteredListings = []; // List of filtered listings.
 
-  // New: Location scope filter (default is Everywhere)
+  // Location scope filter (default is Everywhere).
   LocationScope _selectedLocationScope = LocationScope.everywhere;
 
   // Whether the filter inputs are visible.
@@ -66,10 +69,13 @@ class _HomeContentState extends ConsumerState<HomeContent> {
   ];
 
   // Default user location (fallback) if not available.
-  final double _defaultUserLat = 24.774265;
-  final double _defaultUserLng = 46.738586;
+  final double _defaultUserLat = 24.774265; // Default latitude.
+  final double _defaultUserLng = 46.738586; // Default longitude.
 
-  /// Called when the user presses the Filter button.
+  /// Applies the filter to the list of listings based on the selected criteria.
+  ///
+  /// - Filters by condition, sale type, category, price, distance, and location scope.
+  /// - Updates the `_filteredListings` state with the filtered results.
   void _applyFilter(List<ListingItem> allListings) {
     setState(() {
       double? maxPrice;
@@ -80,6 +86,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
       if (_maxDistanceText.isNotEmpty) {
         maxDistance = double.tryParse(_maxDistanceText);
       }
+
       // Get user's location data from the provider.
       final userData = ref.read(userDataProvider).maybeWhen(
         data: (data) => data,
@@ -163,13 +170,11 @@ class _HomeContentState extends ConsumerState<HomeContent> {
           _filteredListings = List.from(allListings);
         }
         return LayoutBuilder(
-
           builder: (context, constraints) {
+            // Determine the number of columns in the grid based on screen size.
             int crossAxisCount = 2;
             if (constraints.maxWidth >= 1200 && constraints.maxHeight >= 500) {
               crossAxisCount = 6;
-
-
             } else if (constraints.maxWidth >= 735 && constraints.maxHeight >= 400) {
               crossAxisCount = 5;
             } else if (constraints.maxWidth >= 600) {

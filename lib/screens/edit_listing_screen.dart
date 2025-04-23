@@ -1,3 +1,7 @@
+/// This file defines the `EditListingScreen` widget, which allows users to edit
+/// an existing listing. It includes functionality for updating listing details,
+/// managing images, and handling location data.
+
 import 'dart:io';
 import 'dart:developer';
 import 'package:http/http.dart' as http;
@@ -14,10 +18,18 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// A stateful widget that provides a screen for editing a listing.
+///
+/// This widget allows users to modify listing details, upload/remove images,
+/// and update location data. It also supports deleting the listing.
 class EditListingScreen extends ConsumerStatefulWidget {
+  /// The listing item to be edited.
   final ListingItem listing;
+
+  /// Whether the user has admin privileges.
   final bool adminInfo;
 
+  /// Constructor for `EditListingScreen`.
   const EditListingScreen({
     super.key,
     required this.listing,
@@ -29,6 +41,7 @@ class EditListingScreen extends ConsumerStatefulWidget {
 }
 
 class _EditListingScreenState extends ConsumerState<EditListingScreen> {
+  /// List of category options for the listing.
   final List<String> _categoryOptions = [
     "Furniture",
     "Electronics",
@@ -39,22 +52,47 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     "Toys",
     "Other"
   ];
+
+  /// The currently selected category.
   String _selectedCategory = "Other";
+
+  /// Form key for validating and saving form data.
   final _formKey = GlobalKey<FormState>();
+
+  /// Map to store the listing data being edited.
   late Map<String, dynamic> _listingData;
+
+  /// Indicates whether the app is fetching location data.
   bool _isGettingLocation = false;
+
+  /// The address of the listing's location.
   String? _address;
+
+  /// The sale type of the listing (e.g., Buy Now or Bidding).
   SaleType _saleType = SaleType.buyNow;
+
+  /// List of images picked by the user.
   final List<XFile> _pickedImages = [];
+
+  /// Image picker instance for selecting images.
   final ImagePicker _picker = ImagePicker();
+
+  /// Page controller for navigating through images.
   late PageController _pageController;
+
+  /// List of image URLs that have been removed by the user.
   final List<String> _removedImageUrls = [];
-  // Local image cache for editing.
+
+  /// Local cache for storing prefetched images.
   List<Uint8List?> _localCache = [];
+
+  /// Indicates whether the local image cache is still loading.
   bool _isLocalCacheLoading = true;
+
   @override
   void initState() {
     super.initState();
+
     // Pre-populate the form with existing listing data.
     _listingData = {
       "title": widget.listing.title,
@@ -72,22 +110,24 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       "bidHistory": widget.listing.bidHistory,
       "bidFinalized": widget.listing.bidFinalized,
     };
+
     _address = widget.listing.location?.address;
     _saleType = widget.listing.saleType;
     _selectedCategory = widget.listing.category;
     _pageController = PageController();
 
-    // Prefetching images from Firebase Storage.
+    // Prefetch images from Firebase Storage.
     _prefetchImages();
   }
 
   @override
   void dispose() {
+    // Dispose of the page controller to free resources.
     _pageController.dispose();
     super.dispose();
   }
 
-  // Prefetch all image bytes for the current listing.
+  /// Prefetches all image bytes for the current listing from Firebase Storage.
   Future<void> _prefetchImages() async {
     final futures =
         widget.listing.image.map((url) => _getImageBytes(url)).toList();
@@ -97,7 +137,9 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     });
   }
 
-  // Helper function to get image bytes from Firebase Storage.
+  /// Fetches image bytes from Firebase Storage for a given image URL.
+  ///
+  /// Returns the image data as a `Uint8List` or `null` if an error occurs.
   Future<Uint8List?> _getImageBytes(String imageUrl) async {
     try {
       final ref = FirebaseStorage.instance.refFromURL(imageUrl);
@@ -108,7 +150,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     }
   }
 
-  // Helper function to delete the listing.
+  /// Deletes the current listing after user confirmation.
   Future<void> _deleteListing() async {
     // Confirm deletion with the user.
     final confirmed = await showDialog<bool>(
@@ -133,9 +175,10 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     if (confirmed != true) return;
 
     try {
+      // Delete the listing using the provider.
       await ref.read(listingsProvider.notifier).deleteListing(widget.listing);
 
-      // If mounted, show a snackbar and navigate away.
+      // Show a success message and navigate back if the widget is still mounted.
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -149,7 +192,11 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     }
   }
 
-  // Uploading images to Firebase Storage
+  /// Uploads an image file to Firebase Storage and returns its download URL.
+  ///
+  /// [imageFile] is the file to upload.
+  /// [listingId] is the ID of the listing the image belongs to.
+  /// [index] is the index of the image.
   Future<String> uploadImage(
       File imageFile, String listingId, int index) async {
     final storageRef = FirebaseStorage.instance
@@ -158,17 +205,16 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
         .child(listingId)
         .child("image_$index.jpg");
 
-    // Uploading file.
+    // Upload the file.
     UploadTask uploadTask = storageRef.putFile(imageFile);
 
-    // Waiting for completion.
+    // Wait for the upload to complete and return the download URL.
     TaskSnapshot snapshot = await uploadTask;
-
-    // returning download URL.
     String downloadUrl = await snapshot.ref.getDownloadURL();
     return downloadUrl;
   }
 
+  /// Allows the user to pick an image from the specified [source].
   Future<void> _pickImage(ImageSource source) async {
     final pickedFile =
         await _picker.pickImage(source: source, imageQuality: 80);
@@ -179,6 +225,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     }
   }
 
+  /// Opens the Google Map picker screen for selecting a location.
   Future<void> _loadMapGooglePicker() async {
     List<double>? pickedLocation =
         await Navigator.of(context).push<List<double>>(MaterialPageRoute(
@@ -188,7 +235,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                   ifLocationFetched: true,
                 )));
 
-    // If user pressed back don't do anything.
+    // If the user pressed back, do nothing.
     if (pickedLocation == null) return;
 
     setState(() {
@@ -199,6 +246,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       return;
     }
     if (kIsWeb) {
+      // Fetch address for web platforms.
       Map<String, dynamic> address = await _getAddressFromLatLngWeb(
         lat: pickedLocation![0],
         lng: pickedLocation[1],
@@ -221,6 +269,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
         _isGettingLocation = false;
       });
     } else {
+      // Fetch address for non-web platforms.
       String address =
           await _getAddressFromLatLng(pickedLocation[0], pickedLocation[1]);
       setState(() {
@@ -230,10 +279,14 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     }
   }
 
+  /// Removes an image from the listing.
+  ///
+  /// [imageUrl] is the URL of the image to remove (if it's an existing image).
+  /// [xFile] is the file to remove (if it's a newly picked image).
   void _removeImage({String? imageUrl, XFile? xFile}) {
     setState(() {
       if (imageUrl != null) {
-        // Cast the existing images list to List<String>
+        // Remove the image URL from the listing data.
         List<String> currentImages =
             List<String>.from(_listingData["image"] ?? []);
         currentImages.remove(imageUrl);
@@ -241,19 +294,24 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
         _removedImageUrls.add(imageUrl);
       }
       if (xFile != null) {
+        // Remove the picked image file.
         _pickedImages.remove(xFile);
       }
     });
   }
 
+  /// Deletes an image from Firebase Storage and Firestore.
+  ///
+  /// [imageUrl] is the URL of the image to delete.
+  /// [listingId] is the ID of the listing the image belongs to.
   Future<void> _deleteImageFromFirebaseStorageAndFirestore(
       String imageUrl, String listingId) async {
     if (imageUrl.isNotEmpty) {
       try {
-        // Delete from Firebase Storage
+        // Delete the image from Firebase Storage.
         await FirebaseStorage.instance.refFromURL(imageUrl).delete();
 
-        // Delete reference from Firestore
+        // Remove the image reference from Firestore.
         final docRef =
             FirebaseFirestore.instance.collection('listings').doc(listingId);
         final doc = await docRef.get();
@@ -268,6 +326,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     }
   }
 
+  /// Saves the updated listing data.
   void _saveListing() async {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
@@ -280,42 +339,39 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       newImageUrls.add(url);
     }
 
-    // Delete removed images from Firebase Storage and remove them from Firestore reference.
+    // Delete removed images from Firebase Storage and Firestore.
     for (String imageUrl in _removedImageUrls) {
       await _deleteImageFromFirebaseStorageAndFirestore(
           imageUrl, widget.listing.id);
     }
 
-    // Merge remaining existing images with new ones.
+    // Merge existing and new images, removing duplicates.
     List<String> updatedImages = List<String>.from(_listingData["image"] ?? []);
     updatedImages.addAll(newImageUrls);
-    updatedImages = updatedImages.toSet().toList(); // Remove duplicates
+    updatedImages = updatedImages.toSet().toList();
     _listingData["image"] = updatedImages;
 
-    // Parse bid-related fields if sale type is bid, but use existing data if no new value is provided.
+    // Parse bid-related fields if the sale type is bidding.
     DateTime? bidEndTime;
     double? startingBid;
     double? currentHighestBid;
     if (_saleType == SaleType.bid) {
-      // Use new bid end time if provided; otherwise, use existing value.
       if (_listingData["bidEndTime"] != null &&
           _listingData["bidEndTime"].toString().trim().isNotEmpty) {
         bidEndTime = DateTime.parse(_listingData["bidEndTime"]);
       } else {
         bidEndTime = widget.listing.bidEndTime;
       }
-      // Use new starting bid if provided; otherwise, use existing value.
       if (_listingData["startingBid"] != null &&
           _listingData["startingBid"].toString().trim().isNotEmpty) {
         startingBid = double.parse(_listingData["startingBid"]);
       } else {
         startingBid = widget.listing.startingBid;
       }
-      // Preserve current highest bid if it exists; otherwise, initialize it.
       currentHighestBid = widget.listing.currentHighestBid ?? startingBid;
     }
 
-    // Create the updated listing by merging new values with existing ones.
+    // Create the updated listing object.
     final updatedListing = ListingItem(
       id: widget.listing.id,
       ownerId: widget.listing.ownerId,
@@ -343,13 +399,14 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       bidFinalized: widget.listing.bidFinalized,
     );
 
-    // Update the listing via the provider.
+    // Update the listing using the provider.
     await ref.read(listingsProvider.notifier).updateListing(updatedListing);
     if (mounted) {
       Navigator.of(context).pop();
     }
   }
 
+  /// Navigates to the previous image in the image carousel.
   void _previousImage() {
     if (_pageController.page! > 0) {
       _pageController.previousPage(
@@ -357,6 +414,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     }
   }
 
+  /// Navigates to the next image in the image carousel.
   void _nextImage() {
     if (_pageController.page! <
         _listingData["image"].length + _pickedImages.length - 1) {
@@ -722,9 +780,10 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                         backgroundColor: Colors.red,
                       ),
                       onPressed: _deleteListing,
-                      child: Text("Delete Listing", style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimary,
-                      )),
+                      child: Text("Delete Listing",
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          )),
                     ),
                   ],
                 ),
@@ -736,11 +795,14 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     );
   }
 
+  /// Fetches the address from latitude and longitude using the Nominatim API (for web platforms).
+  /// Returns a JSON response containing the address or an error message.
   Future _getAddressFromLatLngWeb({
     required double lat,
     required double lng,
     required Locale lang,
   }) async {
+    // Construct the URI for the Nominatim API.
     final uri = Uri.https("nominatim.openstreetmap.org", "/reverse", {
       "lat": lat.toString(),
       "lon": lng.toString(),
@@ -748,11 +810,13 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     });
 
     try {
+      // Send an HTTP GET request to fetch the address.
       final response = await http.get(
         uri,
         headers: {'Accept-Language': lang.toLanguageTag()},
       );
 
+      // Check if the response status is not successful.
       if (response.statusCode != 200) {
         throw http.ClientException(
           'Error ${response.statusCode}: ${response.body}',
@@ -760,26 +824,35 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
         );
       }
 
+      // Parse the JSON response.
       final jsonResponse = jsonDecode(response.body);
 
+      // Check for errors in the JSON response.
       if (jsonResponse.containsKey('error')) {
         throw 'Error: ${jsonResponse['error']}';
       }
 
-      // Extract address as a readable string
+      // Return the extracted address or a default message.
       return jsonResponse ?? 'Address not found';
     } catch (e) {
+      // Return an error message if an exception occurs.
       return 'Error retrieving address: $e';
     }
   }
 
+  /// Fetches the address from latitude and longitude using the Geocoding package (for non-web platforms).
+  /// Updates the `_listingData` with the location details and returns the address as a string.
   Future _getAddressFromLatLng(double latitude, double longitude) async {
     try {
+      // Fetch placemarks using the Geocoding package.
       final List<geo.Placemark> placeMarks =
           await geo.placemarkFromCoordinates(latitude, longitude);
+
+      // Check if placemarks are available.
       if (placeMarks.isNotEmpty) {
         final geo.Placemark place = placeMarks.first;
 
+        // Update the listing data with location details.
         _listingData["location"] = {
           "lat": latitude,
           "lng": longitude,
@@ -790,11 +863,14 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
           "country": place.country,
         };
 
+        // Return the formatted address.
         return _listingData["location"]["address"];
       } else {
+        // Return a default message if no address is found.
         return 'Address not found';
       }
     } catch (e) {
+      // Log the error and update the state with a fallback message.
       log('Error occurred while fetching address: $e');
       setState(() {
         _address = "Please try another option, or later";

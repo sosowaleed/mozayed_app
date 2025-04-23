@@ -1,3 +1,8 @@
+/// This file defines the `ListingDetailsScreen` widget, which displays the details
+/// of a listing, including images, metadata, and actions like bidding, buying, or reporting.
+/// It uses Flutter's Riverpod for state management and integrates with Firebase for storage
+/// and Firestore for data persistence.
+
 import 'dart:developer';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -12,46 +17,64 @@ import 'package:mozayed_app/providers/user_and_auth_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:typed_data';
 
+/// A stateful widget that displays the details of a listing.
+/// It supports actions like bidding, buying, and reporting.
 class ListingDetailsScreen extends ConsumerStatefulWidget {
+  /// The listing item to display.
   final ListingItem listingItem;
+
+  /// A cache of image bytes for the listing.
   final List<Uint8List?> _imageBytesCache;
+
+  /// Whether to display admin-specific information.
   final bool adminInfo;
-  const ListingDetailsScreen(this._imageBytesCache, {super.key, required this.listingItem, this.adminInfo = false});
+
+  /// Constructor for `ListingDetailsScreen`.
+  const ListingDetailsScreen(this._imageBytesCache,
+      {super.key, required this.listingItem, this.adminInfo = false});
 
   @override
   ConsumerState<ListingDetailsScreen> createState() =>
       _ListingDetailsScreenState();
 }
 
+/// The state class for `ListingDetailsScreen`.
 class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
+  /// The index of the currently displayed image.
   int _currentImageIndex = 0;
+
+  /// Controller for the bid input field.
   final TextEditingController _bidController = TextEditingController();
 
-  // Controllers for the report form.
+  /// Controllers for the report form.
   String? _selectedReportCategory;
   String? _selectedFlag;
   final TextEditingController _reportedValueController =
-  TextEditingController();
+      TextEditingController();
   final TextEditingController _reportDescriptionController =
-  TextEditingController();
+      TextEditingController();
 
-  // Dropdown options.
+  /// Dropdown options for report categories and flags.
   final List<String> _reportCategoriesForNonBid = ["User", "Item"];
   final List<String> _reportCategoriesForBid = ["User", "Item", "Bid"];
-
   final Map<String, List<String>> _flagOptions = {
     "User": ["Not responding", "Location distant was false", "Other"],
-    "Item": ["Condition worse than advertised", "Item sold was different", "Other"],
+    "Item": [
+      "Condition worse than advertised",
+      "Item sold was different",
+      "Other"
+    ],
     "Bid": ["Illegitimate bid", "Not responding", "Other"],
   };
-  // Local cache for image bytes.
+
+  /// Local cache for image bytes.
   List<Uint8List?> _localCache = [];
   bool _isLocalCacheLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // If the cache passed from the ListingWidget is not empty, use it.
+    // Use the passed image cache if available, otherwise prefetch images.
     if (widget._imageBytesCache.isNotEmpty) {
       _localCache = widget._imageBytesCache;
       _isLocalCacheLoading = false;
@@ -60,14 +83,17 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
     }
   }
 
+  /// Prefetches images from Firebase Storage and caches them locally.
   Future<void> _prefetchImages() async {
-    final futures = widget.listingItem.image.map((url) => _getImageBytes(url)).toList();
+    final futures =
+        widget.listingItem.image.map((url) => _getImageBytes(url)).toList();
     _localCache = await Future.wait(futures);
     setState(() {
       _isLocalCacheLoading = false;
     });
   }
 
+  /// Navigates to the previous image in the carousel.
   void _previousImage() {
     setState(() {
       if (_currentImageIndex > 0) {
@@ -78,6 +104,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
     });
   }
 
+  /// Navigates to the next image in the carousel.
   void _nextImage() {
     setState(() {
       if (_currentImageIndex < widget.listingItem.image.length - 1) {
@@ -88,7 +115,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
     });
   }
 
-  // Helper function to get image bytes from Firebase Storage
+  /// Fetches image bytes from Firebase Storage using the given URL.
   Future<Uint8List?> _getImageBytes(String imageUrl) async {
     try {
       final ref = FirebaseStorage.instance.refFromURL(imageUrl);
@@ -98,6 +125,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
     }
   }
 
+  /// Handles the "Buy" action by adding the item to the cart.
   void _handleBuy() {
     ref.read(cartProvider.notifier).addToCart(widget.listingItem);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -108,11 +136,14 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
     );
   }
 
+  /// Handles the "Bid" action by validating and submitting the bid.
   Future<void> _handleBid(UserModel user) async {
     double? enteredBid = double.tryParse(_bidController.text);
     double currentBid = widget.listingItem.currentHighestBid ??
         widget.listingItem.startingBid ??
         widget.listingItem.price;
+
+    // Validate the entered bid.
     if (enteredBid == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -147,8 +178,8 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text("Confirm Bid"),
-        content:
-        Text("Are you sure you want to bid SAR ${NumberFormat('#,##0.00').format(enteredBid)}?"),
+        content: Text(
+            "Are you sure you want to bid SAR ${NumberFormat('#,##0.00').format(enteredBid)}?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -164,7 +195,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
 
     if (confirmed == true) {
       // Show a progress indicator for 3 seconds.
-      if (mounted){
+      if (mounted) {
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -172,10 +203,11 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
         );
         await Future.delayed(const Duration(seconds: 3));
       }
-      if (mounted){
+      if (mounted) {
         Navigator.of(context).pop(); // Remove the progress indicator
       }
 
+      // Update the listing with the new bid details.
       widget.listingItem.setCurrentHighestBid(enteredBid);
       widget.listingItem.setCurrentHighestBidderId(user.id);
       widget.listingItem.setBidHistory({
@@ -184,24 +216,28 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
         'bidTime': DateTime.now().toIso8601String(),
       });
 
-      await ref.read(listingsProvider.notifier).updateListing(widget.listingItem);
+      await ref
+          .read(listingsProvider.notifier)
+          .updateListing(widget.listingItem);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Bid of SAR ${NumberFormat('#,##0.00').format(enteredBid)} placed!"),
+            content: Text(
+                "Bid of SAR ${NumberFormat('#,##0.00').format(enteredBid)} placed!"),
             duration: const Duration(seconds: 1),
           ),
         );
       }
       _bidController.clear();
       if (mounted) {
-        Navigator.of(context).pop(); // Optionally pop back to previous screen.
+        Navigator.of(context)
+            .pop(); // Optionally pop back to the previous screen.
       }
     }
   }
 
-  // Function to open the Report overlay.
+  /// Displays a dialog for reporting the listing or user.
   Future<void> _showReportDialog(UserModel reporter) async {
     // Set default category based on sale type.
     _selectedReportCategory = widget.listingItem.saleType == SaleType.bid
@@ -218,7 +254,7 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
           title: const Text("Report"),
           content: StatefulBuilder(
             builder: (BuildContext context, StateSetter setState) {
-              // Get the flag options based on selected category.
+              // Get the flag options based on the selected category.
               final flagOptions = _flagOptions[_selectedReportCategory!]!;
               return SingleChildScrollView(
                 child: Column(
@@ -229,12 +265,12 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                       decoration: const InputDecoration(labelText: "Category"),
                       value: _selectedReportCategory,
                       items: (widget.listingItem.saleType == SaleType.bid
-                          ? _reportCategoriesForBid
-                          : _reportCategoriesForNonBid)
+                              ? _reportCategoriesForBid
+                              : _reportCategoriesForNonBid)
                           .map((category) => DropdownMenuItem<String>(
-                        value: category,
-                        child: Text(category),
-                      ))
+                                value: category,
+                                child: Text(category),
+                              ))
                           .toList(),
                       onChanged: (value) {
                         setState(() {
@@ -250,9 +286,9 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                       value: _selectedFlag,
                       items: flagOptions
                           .map((flag) => DropdownMenuItem<String>(
-                        value: flag,
-                        child: Text(flag),
-                      ))
+                                value: flag,
+                                child: Text(flag),
+                              ))
                           .toList(),
                       onChanged: (value) {
                         setState(() {
@@ -303,7 +339,8 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                   "handled": false,
                   "image": listing.image,
                   // Include currentHighestBidderId if the saleType is bid.
-                  if (listing.saleType == SaleType.bid && listing.currentHighestBidderId != null)
+                  if (listing.saleType == SaleType.bid &&
+                      listing.currentHighestBidderId != null)
                     "currentHighestBidderId": listing.currentHighestBidderId,
                   "timestamp": DateTime.now().toIso8601String(),
                 };
@@ -333,9 +370,9 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
     );
   }
 
-
   @override
   void dispose() {
+    // Dispose of controllers to free up resources.
     _bidController.dispose();
     _reportedValueController.dispose();
     _reportDescriptionController.dispose();
@@ -348,9 +385,9 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
     final user = UserModel.fromMap(ref.read(userDataProvider).value!);
     final theme = Theme.of(context);
 
-    // Sort the bid history (if any) descending by bidAmount.
+    // Sort the bid history (if any) in descending order by bid amount.
     final List<Map<String, dynamic>> sortedBidHistory =
-    List<Map<String, dynamic>>.from(listing.bidHistory ?? []);
+        List<Map<String, dynamic>>.from(listing.bidHistory ?? []);
     sortedBidHistory.sort((a, b) {
       final bidA = a['bidAmount'] as num;
       final bidB = b['bidAmount'] as num;
@@ -362,7 +399,8 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
       appBar: AppBar(
         title: Text(
           listing.title,
-          style: TextStyle(fontSize: 18, color: theme.appBarTheme.titleTextStyle?.color),
+          style: TextStyle(
+              fontSize: 18, color: theme.appBarTheme.titleTextStyle?.color),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -382,13 +420,13 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                   child: _isLocalCacheLoading
                       ? const Center(child: CircularProgressIndicator())
                       : _localCache[_currentImageIndex] != null
-                      ? Image.memory(
-                    _localCache[_currentImageIndex]!,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                  )
-                      : const Center(child: Icon(Icons.error)),
+                          ? Image.memory(
+                              _localCache[_currentImageIndex]!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                            )
+                          : const Center(child: Icon(Icons.error)),
                 ),
                 // Left Arrow.
                 Positioned(
@@ -398,7 +436,8 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                     onPressed: _previousImage,
                     color: theme.colorScheme.onPrimary,
                     style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.all(theme.colorScheme.secondary.withOpacity(0.5)),
+                      backgroundColor: WidgetStateProperty.all(
+                          theme.colorScheme.secondary.withOpacity(0.5)),
                     ),
                   ),
                 ),
@@ -410,7 +449,8 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                     onPressed: _nextImage,
                     color: theme.colorScheme.onPrimary,
                     style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.all(theme.colorScheme.secondary.withOpacity(0.5)),
+                      backgroundColor: WidgetStateProperty.all(
+                          theme.colorScheme.secondary.withOpacity(0.5)),
                     ),
                   ),
                 ),
@@ -431,61 +471,81 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
                     children: [
                       Text(
                         "Listed by: ${listing.ownerName}",
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w500),
                       ),
                       TextButton.icon(
                         onPressed: () => _showReportDialog(user),
                         icon: const Icon(Icons.report, color: Colors.red),
-                        label: const Text("Report", style: TextStyle(color: Colors.red)),
+                        label: const Text("Report",
+                            style: TextStyle(color: Colors.red)),
                       )
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
                     "Condition: ${listing.condition}",
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     "Price: SAR ${NumberFormat('#,##0.00').format(listing.price)}",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     "Quantity: ${listing.quantity}",
-                    style: TextStyle(fontSize: 16, color: theme.textTheme.bodyLarge?.color, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                        fontSize: 16,
+                        color: theme.textTheme.bodyLarge?.color,
+                        fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 8),
                   // Distance Indicator.
                   if (listing.location != null)
                     Text(
                       "Distance: ${(Geolocator.distanceBetween(
-                        user.location.lat,
-                        user.location.lng,
-                        listing.location!.lat,
-                        listing.location!.lng,
-                      ) / 1000).toStringAsFixed(1)} km",
-                      style: TextStyle(fontSize: 16, color: theme.textTheme.bodyLarge?.color, fontWeight: FontWeight.w500),
+                            user.location.lat,
+                            user.location.lng,
+                            listing.location!.lat,
+                            listing.location!.lng,
+                          ) / 1000).toStringAsFixed(1)} km",
+                      style: TextStyle(
+                          fontSize: 16,
+                          color: theme.textTheme.bodyLarge?.color,
+                          fontWeight: FontWeight.w500),
                     ),
                   const SizedBox(height: 2),
                   // Bid End Date.
                   if (listing.saleType == SaleType.bid) ...[
                     Text(
                       "Bid End Date: ${listing.bidEndTime!.toLocal().toString().substring(0, 16)}",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: theme.colorScheme.error),
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: theme.colorScheme.error),
                     ),
                     const SizedBox(height: 10),
                   ],
                   Text(
                     "Description:",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge!.color),
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: theme.textTheme.bodyLarge!.color),
                   ),
                   const SizedBox(height: 5),
                   Expanded(
                     child: SingleChildScrollView(
                       child: Text(
                         listing.description,
-                        style: TextStyle(fontSize: 14, color: theme.textTheme.bodyLarge!.color),
+                        style: TextStyle(
+                            fontSize: 14,
+                            color: theme.textTheme.bodyLarge!.color),
                       ),
                     ),
                   ),
@@ -493,39 +553,44 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
 
                   if (listing.saleType == SaleType.bid) ...[
                     const SizedBox(height: 8),
-
                     Text(
                       "Bidders (Highest to Lowest):",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge!.color),
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: theme.textTheme.bodyLarge!.color),
                     ),
-
                     SizedBox(
                       height: 100,
                       child: sortedBidHistory.isEmpty
                           ? const Center(child: Text("No bids yet."))
                           : ListView.builder(
-                        itemCount: sortedBidHistory.length,
-                        itemBuilder: (context, index) {
-                          final bidEntry = sortedBidHistory[index];
-                          // Check if this bid belongs to the current user.
-                          final bool isCurrentUserBid = bidEntry['bidderId'] == user.id;
-                          return Container(
-                            color: isCurrentUserBid ? theme.colorScheme.secondary.withOpacity(0.2) : null,
-                            child: ListTile(
-                              dense: true,
-                              leading: const Icon(Icons.account_circle),
-                              title: Text(
-                                "Bid: SAR ${NumberFormat('#,##0.00').format(bidEntry['bidAmount'] as num)}",
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                              subtitle: Text(
-                                "Time: ${bidEntry['bidTime']}",
-                                style: const TextStyle(fontSize: 12),
-                              ),
+                              itemCount: sortedBidHistory.length,
+                              itemBuilder: (context, index) {
+                                final bidEntry = sortedBidHistory[index];
+                                // Check if this bid belongs to the current user.
+                                final bool isCurrentUserBid =
+                                    bidEntry['bidderId'] == user.id;
+                                return Container(
+                                  color: isCurrentUserBid
+                                      ? theme.colorScheme.secondary
+                                          .withOpacity(0.2)
+                                      : null,
+                                  child: ListTile(
+                                    dense: true,
+                                    leading: const Icon(Icons.account_circle),
+                                    title: Text(
+                                      "Bid: SAR ${NumberFormat('#,##0.00').format(bidEntry['bidAmount'] as num)}",
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                    subtitle: Text(
+                                      "Time: ${bidEntry['bidTime']}",
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
-                          );
-                        },
-                      ),
                     ),
                   ],
                 ],
@@ -538,87 +603,99 @@ class _ListingDetailsScreenState extends ConsumerState<ListingDetailsScreen> {
 
           Container(
             color: theme.scaffoldBackgroundColor,
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+            padding:
+                const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
             child: widget.adminInfo
                 ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Admin Details",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Listing ID: ${listing.id}",
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "Owner: ${listing.ownerName}",
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "Owner ID: ${listing.ownerId}",
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "Listing Location: ${listing.location.toString()}",
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "Sale Mode: ${listing.saleType == SaleType.bid ? "Bid" : "Buy Now"}",
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ],
-            )
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Admin Details",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Listing ID: ${listing.id}",
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Owner: ${listing.ownerName}",
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Owner ID: ${listing.ownerId}",
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Listing Location: ${listing.location.toString()}",
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Sale Mode: ${listing.saleType == SaleType.bid ? "Bid" : "Buy Now"}",
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ],
+                  )
                 : listing.saleType == SaleType.bid
-                ? Column(
-              children: [
-                Text(
-                  "Current Highest Bid: SAR ${NumberFormat('#,##0.00').format(listing.currentHighestBid ?? listing.startingBid ?? listing.price)}",
-                  style: const TextStyle(fontSize: 16),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _bidController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: "Enter your bid",
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => _handleBid(user),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 0),
-                    fixedSize: Size(MediaQuery.of(context).size.width, 40),
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    backgroundColor: theme.colorScheme.secondary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: Text("Bid", style: TextStyle(fontSize: 16, color: theme.colorScheme.onPrimary)),
-                ),
-              ],
-            )
-                : ElevatedButton(
-              onPressed: _handleBuy,
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 0),
-                fixedSize: Size(MediaQuery.of(context).size.width, 40),
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                backgroundColor: theme.colorScheme.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: Text("Buy", style: TextStyle(fontSize: 18, color: theme.colorScheme.onPrimary)),
-            ),
+                    ? Column(
+                        children: [
+                          Text(
+                            "Current Highest Bid: SAR ${NumberFormat('#,##0.00').format(listing.currentHighestBid ?? listing.startingBid ?? listing.price)}",
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _bidController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                            decoration: const InputDecoration(
+                              labelText: "Enter your bid",
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => _handleBid(user),
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 0),
+                              fixedSize:
+                                  Size(MediaQuery.of(context).size.width, 40),
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              backgroundColor: theme.colorScheme.secondary,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: Text("Bid",
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    color: theme.colorScheme.onPrimary)),
+                          ),
+                        ],
+                      )
+                    : ElevatedButton(
+                        onPressed: _handleBuy,
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 0),
+                          fixedSize:
+                              Size(MediaQuery.of(context).size.width, 40),
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          backgroundColor: theme.colorScheme.primary,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: Text("Buy",
+                            style: TextStyle(
+                                fontSize: 18,
+                                color: theme.colorScheme.onPrimary)),
+                      ),
           ),
         ],
       ),

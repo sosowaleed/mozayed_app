@@ -12,6 +12,8 @@ import 'package:geocoding/geocoding.dart' as geo;
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
+/// A screen that allows the user to update their profile information.
+/// This includes fields such as name, email, password, and location.
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
@@ -20,14 +22,13 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  String? _address;
-  String _password = "Old Password";
-  // This map will hold the new values for fields the user wants to update.
-  final Map<String, dynamic> _userUpdates = {};
-  final _formKey = GlobalKey<FormState>();
-  bool _isGettingLocation = false;
+  String? _address; // Stores the user's address.
+  String _password = "Old Password"; // Stores the user's password.
+  final Map<String, dynamic> _userUpdates = {}; // Holds updated user data.
+  final _formKey = GlobalKey<FormState>(); // Key for the form validation.
+  bool _isGettingLocation = false; // Indicates if location is being fetched.
 
-  // Map to keep track of which fields the user has marked for update.
+  // Tracks which fields the user wants to update.
   final Map<String, bool> _fieldsToUpdate = {
     'name': false,
     'email': false,
@@ -35,18 +36,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     'location': false,
   };
 
-  // Helper to mark all fields.
+  /// Marks all fields for update.
   void _checkAllFields() {
     setState(() {
       _fieldsToUpdate.updateAll((key, value) => true);
     });
   }
 
+  /// Opens a map picker for the user to select a location.
+  /// Updates the user's location data and address.
   Future<void> _loadMapPicker(UserModel user) async {
     List<double>? pickedLocation =
         await Navigator.of(context).push<List<double>>(MaterialPageRoute(
             builder: (ctx) => GoogleMapScreen(
-                  latitude: user.location.lat, longitude: user.location.lng,
+                  latitude: user.location.lat,
+                  longitude: user.location.lng,
                 )));
     if (pickedLocation == null) {
       return;
@@ -57,6 +61,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     if (!mounted) return;
     if (kIsWeb) {
+      // Fetch address using a web-based API.
       Map<String, dynamic> address = await _getAddressFromLatLngWeb(
         lat: pickedLocation[0],
         lng: pickedLocation[1],
@@ -72,7 +77,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           "zip": address["address"]["postcode"],
           "country": address["address"]["country"],
         };
-        // Mark location for update
         _fieldsToUpdate['location'] = true;
       }
       setState(() {
@@ -80,6 +84,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _isGettingLocation = false;
       });
     } else {
+      // Fetch address using the geocoding package.
       String address =
           await _getAddressFromLatLng(pickedLocation[0], pickedLocation[1]);
       _userUpdates["location"] = {
@@ -97,9 +102,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Fetch the current user data.
     UserModel user = UserModel.fromMap(ref.watch(userDataProvider).value!);
-    // Use the current address from the user's profile if none was picked.
-    _address ??= user.location.address;
+    _address ??= user
+        .location.address; // Use the user's current address if none was picked.
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -119,6 +125,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Title of the profile updater.
                     Container(
                       margin: const EdgeInsets.symmetric(
                           vertical: 20, horizontal: 20),
@@ -132,13 +139,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         textAlign: TextAlign.center,
                       ),
                     ),
-                    // "Check All" button to select all fields for update
+                    // Button to select all fields for update.
                     ElevatedButton(
                       onPressed: _checkAllFields,
                       child: const Text("Select All Fields"),
                     ),
                     const SizedBox(height: 12),
-                    // Name Field Row with Checkbox
+                    // Name field with a checkbox.
                     Row(
                       children: [
                         Checkbox(
@@ -172,7 +179,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                       ],
                     ),
-                    // Email Field Row with Checkbox
+                    // Email field with a checkbox.
                     Row(
                       children: [
                         Checkbox(
@@ -210,7 +217,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // Password Field Row with Checkbox
+                    // Password field with a checkbox.
                     Row(
                       children: [
                         Checkbox(
@@ -246,7 +253,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // Location Field with Button & Checkbox
+                    // Location field with a button and checkbox.
                     Row(
                       children: [
                         Checkbox(
@@ -272,7 +279,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ? const CircularProgressIndicator()
                         : Text(_address ?? "No address"),
                     const SizedBox(height: 12),
-                    // Save Button: updates all checked fields in Firebase Auth and Firestore
+                    // Save button to update all selected fields.
                     ElevatedButton(
                       onPressed: () async {
                         await _save(user);
@@ -289,14 +296,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  /// Saves the updated user data to Firebase Authentication and Firestore.
   Future<void> _save(UserModel user) async {
     if (!_formKey.currentState!.validate()) {
-      // If validation fails, stop here.
-      return;
+      return; // Stop if validation fails.
     }
     _formKey.currentState!.save();
 
-    // Update Firebase Authentication for email and password if necessary:
+    // Update Firebase Authentication for email and password.
     final currentUser = FirebaseAuth.instance.currentUser;
     try {
       if (_fieldsToUpdate['email'] == true &&
@@ -309,7 +316,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         await currentUser!.updatePassword(_userUpdates['password']);
       }
     } catch (e) {
-      // In production, we need to reauthenticate before updating.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Auth update failed: $e")),
@@ -318,11 +324,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       return;
     }
 
-    // Updating Firestore user document:
+    // Update Firestore user document.
     try {
-      // Removing password so its not store in firestore.
-      _userUpdates.remove('password');
-      // Merge the updates with the existing document.
+      _userUpdates.remove('password'); // Do not store password in Firestore.
       await ref.read(userDataProvider.notifier).updateUserData(_userUpdates);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -338,6 +342,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
+  /// Fetches the address from latitude and longitude using a web-based API.
   Future _getAddressFromLatLngWeb({
     required double lat,
     required double lng,
@@ -374,6 +379,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
+  /// Fetches the address from latitude and longitude using the geocoding package.
   Future _getAddressFromLatLng(double latitude, double longitude) async {
     try {
       final List<geo.Placemark> placeMarks =

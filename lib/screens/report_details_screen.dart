@@ -9,23 +9,43 @@ import 'package:mozayed_app/models/report_model.dart';
 import 'package:mozayed_app/models/user_model.dart';
 import 'dart:typed_data';
 
+/// Enum representing possible actions for a report.
 enum ReportAction { warn, suspend, deactivate, remove }
 
+/// A screen that displays the details of a report and allows an admin to take actions.
+///
+/// This screen is stateful and uses Riverpod for state management.
 class ReportDetailsScreen extends ConsumerStatefulWidget {
+  /// The report being displayed.
   final ReportModel report;
-  final UserModel currentAdmin; // The admin using the screen.
-  const ReportDetailsScreen({super.key, required this.report, required this.currentAdmin});
+
+  /// The admin currently using the screen.
+  final UserModel currentAdmin;
+
+  /// Constructor for the `ReportDetailsScreen`.
+  const ReportDetailsScreen(
+      {super.key, required this.report, required this.currentAdmin});
 
   @override
-  ConsumerState<ReportDetailsScreen> createState() => _ReportDetailsScreenState();
+  ConsumerState<ReportDetailsScreen> createState() =>
+      _ReportDetailsScreenState();
 }
 
 class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
+  /// Indicates whether a report action is being processed.
   bool _processing = false;
+
+  /// The index of the currently displayed image in the report.
   int _currentImageIndex = 0;
-  final TextEditingController _actionMessageController = TextEditingController();
-  // Local cache for report images.
+
+  /// Controller for the text field used to collect admin messages.
+  final TextEditingController _actionMessageController =
+      TextEditingController();
+
+  /// Indicates whether report images are still loading.
   bool _isImagesLoading = true;
+
+  /// Local cache for storing report images as `Uint8List`.
   List<Uint8List?> _localCache = [];
 
   @override
@@ -34,6 +54,7 @@ class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
     _prefetchReportImages();
   }
 
+  /// Prefetches report images from Firebase Storage and caches them locally.
   Future<void> _prefetchReportImages() async {
     if (widget.report.image.isEmpty) {
       _localCache = [];
@@ -52,7 +73,10 @@ class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
       _isImagesLoading = false;
     });
   }
-  // Shows an overlay dialog to collect admin message; returns the entered message.
+
+  /// Displays an overlay dialog to collect a message from the admin.
+  ///
+  /// Returns the entered message as a `String`, or `null` if the dialog is canceled.
   Future<String?> _showActionOverlay() async {
     _actionMessageController.clear();
     return await showDialog<String>(
@@ -62,7 +86,8 @@ class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
           title: const Text("Enter Email Message"),
           content: TextField(
             controller: _actionMessageController,
-            decoration: const InputDecoration(labelText: "Message Will be sent to the Seller"),
+            decoration: const InputDecoration(
+                labelText: "Message Will be sent to the Seller"),
             maxLines: 4,
           ),
           actions: [
@@ -81,6 +106,8 @@ class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
       },
     );
   }
+
+  /// Navigates to the previous image in the report.
   void _previousImage() {
     setState(() {
       if (_currentImageIndex > 0) {
@@ -91,6 +118,7 @@ class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
     });
   }
 
+  /// Navigates to the next image in the report.
   void _nextImage() {
     setState(() {
       if (_currentImageIndex < widget.report.image.length - 1) {
@@ -100,9 +128,17 @@ class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
       }
     });
   }
-  // Calls the HTTPS function to send an email.
+
+  /// Sends an email using an HTTPS callable function.
+  ///
+  /// Parameters:
+  /// - `functionUrl`: The URL of the deployed HTTP function.
+  /// - `recipient`: The recipient's email address.
+  /// - `category`: The category of the report.
+  /// - `flag`: The flag associated with the report.
+  /// - `bodyText`: The body of the email.
   Future<void> sendReportEmail({
-    required String functionUrl, // URL of the deployed HTTP function.
+    required String functionUrl,
     required String recipient,
     required String category,
     required String flag,
@@ -128,7 +164,10 @@ class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
     }
   }
 
-  // Process the report action.
+  /// Processes the selected report action.
+  ///
+  /// Parameters:
+  /// - `action`: The action to be performed on the report.
   Future<void> _processReportAction(ReportAction action) async {
     final report = widget.report;
     setState(() {
@@ -144,9 +183,7 @@ class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
       return;
     }
 
-    // Determine recipient email:
-    // For a "User" report, the reported user is the one in report.listingOwnerId.
-    // For an "Item" or "Bid" report, use the listing owner's email.
+    // Determine recipient email.
     String recipientEmail = "";
     try {
       final userDoc = await FirebaseFirestore.instance
@@ -159,6 +196,7 @@ class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
       log("Error fetching reported user email: $e");
     }
 
+    // Determine email prefix based on the action.
     String actionPrefix = "";
     switch (action) {
       case ReportAction.deactivate:
@@ -176,6 +214,7 @@ class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
     }
 
     final String prefixedCategory = "$actionPrefix: ${report.category}";
+
     // Send email using the callable function.
     await sendReportEmail(
       functionUrl: "https://sendreportemailhttp-cj7ajmydla-uc.a.run.app",
@@ -185,9 +224,8 @@ class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
       bodyText: adminMessage,
     );
 
-    // Process backend updates.
+    // Process backend updates based on the report category and action.
     if (report.category.toLowerCase() == "user") {
-      // For a user report, update the reported user's document.
       if (action == ReportAction.deactivate) {
         await FirebaseFirestore.instance
             .collection("users")
@@ -199,18 +237,13 @@ class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
             .doc(report.listingOwnerId)
             .update({"suspended": true});
       }
-      // Warn action does not update user status.
     } else {
-      // For an item or bid report, if action is remove, delete the listing.
       if (action == ReportAction.remove) {
-        // Get a reference to the container (folder) for this item/bid.
         final containerRef = FirebaseStorage.instance
             .ref()
             .child("listing_images")
             .child(report.listingId);
-        // List all items in this container.
         final listResult = await containerRef.listAll();
-        // Delete each file.
         for (var itemRef in listResult.items) {
           try {
             await itemRef.delete();
@@ -219,7 +252,6 @@ class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
             log("Error deleting image ${itemRef.fullPath}: $e");
           }
         }
-        // Delete the container itself.
         await FirebaseFirestore.instance
             .collection("listings")
             .doc(report.listingId)
@@ -260,122 +292,126 @@ class _ReportDetailsScreenState extends ConsumerState<ReportDetailsScreen> {
       body: _processing
           ? const Center(child: CircularProgressIndicator())
           : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (report.image.isNotEmpty)
-                Expanded(
-                  flex: 3,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: _isImagesLoading
-                            ? const Center(child: CircularProgressIndicator())
-                            : _localCache[_currentImageIndex] != null
-                            ? Image.memory(
-                          _localCache[_currentImageIndex]!,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                        )
-                            : const Center(child: Icon(Icons.error)),
-                      ),
-                      // Left Arrow.
-                      Positioned(
-                        left: 10,
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back_ios, size: 30),
-                          onPressed: _previousImage,
-                          color: theme.colorScheme.onPrimary,
-                          style: ButtonStyle(
-                            backgroundColor: WidgetStateProperty.all(theme.colorScheme.secondary.withOpacity(0.5)),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (report.image.isNotEmpty)
+                  Expanded(
+                    flex: 3,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: _isImagesLoading
+                              ? const Center(child: CircularProgressIndicator())
+                              : _localCache[_currentImageIndex] != null
+                                  ? Image.memory(
+                                      _localCache[_currentImageIndex]!,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                    )
+                                  : const Center(child: Icon(Icons.error)),
+                        ),
+                        Positioned(
+                          left: 10,
+                          child: IconButton(
+                            icon: const Icon(Icons.arrow_back_ios, size: 30),
+                            onPressed: _previousImage,
+                            color: theme.colorScheme.onPrimary,
+                            style: ButtonStyle(
+                              backgroundColor: WidgetStateProperty.all(
+                                  theme.colorScheme.secondary.withOpacity(0.5)),
+                            ),
                           ),
                         ),
-                      ),
-                      // Right Arrow.
-                      Positioned(
-                        right: 10,
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_forward_ios, size: 30),
-                          onPressed: _nextImage,
-                          color: theme.colorScheme.onPrimary,
-                          style: ButtonStyle(
-                            backgroundColor: WidgetStateProperty.all(theme.colorScheme.secondary.withOpacity(0.5)),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              Expanded(
-                flex: 7,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "Listed by: ${report.listingOwnerName}",
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text("Category: ${report.category}",
-                          style: theme.textTheme.titleLarge),
-                      const SizedBox(height: 8),
-                      Text("Flag: ${report.flag}",
-                          style: theme.textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      Text("Description: ${report.description}",
-                          style: theme.textTheme.bodyMedium),
-                      const SizedBox(height: 8),
-                      Text("Listing Title: ${report.listingTitle}",
-                          style: theme.textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      Text("Listing Condition: ${report.listingCondition}",
-                          style: theme.textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      Text("Reported At: ${report.timestamp}",
-                          style: theme.textTheme.bodySmall),
-                      const SizedBox(height: 16),
-                      // Action buttons.
-                      if (report.category.toLowerCase() == "user") ...[
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            ElevatedButton(
-                              onPressed: () => _processReportAction(ReportAction.deactivate),
-                              child: const Text("Deactivate"),
+                        Positioned(
+                          right: 10,
+                          child: IconButton(
+                            icon: const Icon(Icons.arrow_forward_ios, size: 30),
+                            onPressed: _nextImage,
+                            color: theme.colorScheme.onPrimary,
+                            style: ButtonStyle(
+                              backgroundColor: WidgetStateProperty.all(
+                                  theme.colorScheme.secondary.withOpacity(0.5)),
                             ),
-                            ElevatedButton(
-                              onPressed: () => _processReportAction(ReportAction.suspend),
-                              child: const Text("Suspend"),
-                            ),
-                            ElevatedButton(
-                              onPressed: () => _processReportAction(ReportAction.warn),
-                              child: const Text("Send Warning"),
-                            ),
-                          ],
-                        ),
-                      ] else if (report.category.toLowerCase() == "item" ||
-                          report.category.toLowerCase() == "bid") ...[
-                        Center(
-                          child: ElevatedButton(
-                            onPressed: () => _processReportAction(ReportAction.remove),
-                            child: const Text("Remove Listing / Bid"),
                           ),
                         ),
                       ],
-                    ],
+                    ),
+                  ),
+                Expanded(
+                  flex: 7,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Listed by: ${report.listingOwnerName}",
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text("Category: ${report.category}",
+                            style: theme.textTheme.titleLarge),
+                        const SizedBox(height: 8),
+                        Text("Flag: ${report.flag}",
+                            style: theme.textTheme.titleMedium),
+                        const SizedBox(height: 8),
+                        Text("Description: ${report.description}",
+                            style: theme.textTheme.bodyMedium),
+                        const SizedBox(height: 8),
+                        Text("Listing Title: ${report.listingTitle}",
+                            style: theme.textTheme.titleMedium),
+                        const SizedBox(height: 8),
+                        Text("Listing Condition: ${report.listingCondition}",
+                            style: theme.textTheme.titleMedium),
+                        const SizedBox(height: 8),
+                        Text("Reported At: ${report.timestamp}",
+                            style: theme.textTheme.bodySmall),
+                        const SizedBox(height: 16),
+                        if (report.category.toLowerCase() == "user") ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              ElevatedButton(
+                                onPressed: () => _processReportAction(
+                                    ReportAction.deactivate),
+                                child: const Text("Deactivate"),
+                              ),
+                              ElevatedButton(
+                                onPressed: () =>
+                                    _processReportAction(ReportAction.suspend),
+                                child: const Text("Suspend"),
+                              ),
+                              ElevatedButton(
+                                onPressed: () =>
+                                    _processReportAction(ReportAction.warn),
+                                child: const Text("Send Warning"),
+                              ),
+                            ],
+                          ),
+                        ] else if (report.category.toLowerCase() == "item" ||
+                            report.category.toLowerCase() == "bid") ...[
+                          Center(
+                            child: ElevatedButton(
+                              onPressed: () =>
+                                  _processReportAction(ReportAction.remove),
+                              child: const Text("Remove Listing / Bid"),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
     );
   }
 }
