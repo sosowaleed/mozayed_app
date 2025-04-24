@@ -35,15 +35,26 @@ class _AuthScreenState extends State<AuthScreen> {
   /// Handles saving the form data and performing login or signup.
   void _save() async {
     if (!_formKey.currentState!.validate()) {
-      if (_address == "No address" || _address == "Address not found") {
-        setState(() {
-          _address = "Please try another option, or later";
-        });
-        return;
-      }
       return;
     }
     _formKey.currentState!.save();
+
+    // Only for signup: Check if location is provided
+    if (!_isLogin) {
+      if (_userModel["location"] == null ||
+          _userModel["location"]["address"] == null ||
+          _userModel["location"]["address"] == "No address" ||
+          _userModel["location"]["address"] == "Address not found" ||
+          _userModel["location"]["address"] == "Please try another option, or later") {
+        setState(() {
+          _address = "Please select your location before signing up.";
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Location is required for registration.")),
+        );
+        return;
+      }
+    }
 
     try {
       if (_isLogin) {
